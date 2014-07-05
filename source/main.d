@@ -1,5 +1,6 @@
 import dsfml.graphics;
 import std.stdio;
+import std.algorithm;
 import game;
 
 enum GAME_WIDTH = 320;
@@ -13,6 +14,7 @@ enum GO_DOWN_KEY = Keyboard.Key.K;
 enum GO_LEFT_KEY = Keyboard.Key.J;
 
 enum BLOCK_SIZE = 16;
+enum BACKGROUND_COLOR = Color(64, 64, 64, 255);
 
 void main(string[] args) {
 	Game game = new Game();
@@ -88,16 +90,14 @@ void main(string[] args) {
 			movement.x += 1;
 		
 		// Change facing
-		changeFacing(player.facing, movement);		
+		changeFacing(player.facing, movement);
 		player.position += movement;
 		
 		// Draw stuff
-		window.clear();
+		window.clear(BACKGROUND_COLOR);
 		
 		// Draw player
 		RenderStates state;
-		state.transform = Transform.Identity;
-		
 		state.transform.translate(
 			player.position.x * BLOCK_SIZE,
 			player.position.y * BLOCK_SIZE
@@ -106,6 +106,12 @@ void main(string[] args) {
 		auto playerSprite = playerSprites[player.facing];
 		
 		window.draw(playerSprite, state);
+		
+		// Draw walls
+		foreach(Wall wall; stage.walls) {
+			renderWall(wall, window);
+		}
+		
 		window.display();
 	}
 }
@@ -120,6 +126,17 @@ private RenderWindow setupWindow() {
 private Stage setupTestStage() {
 	auto stage = new Stage();
 	stage.player = new Pusher();
+	
+	// Setup test walls
+	auto LWall = new Wall();
+	LWall.blocks = [
+		Point(0, 0),
+		Point(0, 1),
+		Point(0, 2), Point(1, 2),
+	];
+	LWall.position = Point(3, 3);
+	stage.walls ~= LWall;
+	
 	return stage;
 }
 
@@ -176,4 +193,57 @@ private void changeFacing(ref Side facing, Point direction) {
 		else if(direction.y > 0)
 			facing = Side.Down;
 	}
+}
+
+private void renderWall(Wall wall, RenderTarget target) {
+	enum fillColor = Color.Black;
+	enum inkColor = Color.White;
+	
+	const int vertexCount = 8 * wall.blocks.length;
+	auto vertexArray = new VertexArray(PrimitiveType.Quads, vertexCount);
+	
+	foreach(int i, Point block; wall.blocks) {
+		const int fillIndex = i * 8 + 4;
+		const int inkIndex = i * 8;
+		
+		int t, r, b, l;
+		t = block.y * BLOCK_SIZE;
+		r = (block.x + 1) * BLOCK_SIZE;
+		b = (block.y + 1) * BLOCK_SIZE;
+		l = block.x * BLOCK_SIZE;
+		
+		vertexArray[inkIndex + 0].position = Vector2f(l, t);
+		vertexArray[inkIndex + 1].position = Vector2f(r, t);
+		vertexArray[inkIndex + 2].position = Vector2f(r, b);
+		vertexArray[inkIndex + 3].position = Vector2f(l, b);
+		
+		bool[int] outlines;
+		outlines[Side.Top   ] = !canFind(wall.blocks, block + Point( 0, -1));
+		outlines[Side.Right ] = !canFind(wall.blocks, block + Point( 1,  0));
+		outlines[Side.Bottom] = !canFind(wall.blocks, block + Point( 0,  1));
+		outlines[Side.Left  ] = !canFind(wall.blocks, block + Point(-1,  0));
+		
+		if(outlines[Side.Top   ]) t += BLOCK_SIZE / 8;
+		if(outlines[Side.Right ]) r -= BLOCK_SIZE / 8;
+		if(outlines[Side.Bottom]) b -= BLOCK_SIZE / 8;
+		if(outlines[Side.Left  ]) l += BLOCK_SIZE / 8;
+		
+		vertexArray[fillIndex + 0].position = Vector2f(l, t);
+		vertexArray[fillIndex + 1].position = Vector2f(r, t);
+		vertexArray[fillIndex + 2].position = Vector2f(r, b);
+		vertexArray[fillIndex + 3].position = Vector2f(l, b);
+		
+		for(int j = fillIndex; j < fillIndex + 4; j++)
+			vertexArray[j].color = fillColor;
+		for(int j = inkIndex; j < inkIndex + 4; j++)
+			vertexArray[j].color = inkColor;
+	}
+	
+	RenderStates states;
+	states.transform.translate(
+		wall.position.x * BLOCK_SIZE,
+		wall.position.y * BLOCK_SIZE
+	);
+	
+	target.draw(vertexArray, states);
 }

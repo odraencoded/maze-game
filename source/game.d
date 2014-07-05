@@ -37,9 +37,15 @@ enum Side {
 
 class Stage {
 	Pusher player;
+	Wall[] walls;
 }
 
 class Pusher {
 	Point position;
 	Side facing = Side.Down;
+}
+
+class Wall {
+	Point position;
+	Point[] blocks;
 }
