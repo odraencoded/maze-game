@@ -1,3 +1,6 @@
+import std.math;
+import std.algorithm;
+
 import dsfml.graphics;
 
 alias Point = Vector2!int;
@@ -38,6 +41,15 @@ enum Side {
 class Stage {
 	Pusher player;
 	Wall[] walls;
+	bool canGo(Point position, Side direction) {
+		auto offset = getOffset(direction);
+		auto newPosition = position + offset;
+		foreach(Wall wall; walls) {
+			if(canFind(wall.blocks, newPosition - wall.position))
+				return false;
+		}
+		return true;
+	}
 }
 
 class Pusher {
@@ -48,4 +60,33 @@ class Pusher {
 class Wall {
 	Point position;
 	Point[] blocks;
+}
+
+Side getDirection(Point offset) {
+	if(offset.x) offset.x /= abs(offset.x);
+	if(offset.y) offset.y /= abs(offset.y);
+	return directionTable[offset];
+}
+
+Point getOffset(Side side) {
+	return offsetTable[side];
+}
+
+private immutable Side[Point] directionTable;
+private immutable Point[Side] offsetTable;
+
+static this() {
+	// Initialize direction table
+	directionTable[Point( 0,  0)] = Side.None;
+	directionTable[Point( 0, -1)] = Side.Top;
+	directionTable[Point( 1, -1)] = Side.TopRight;
+	directionTable[Point( 1,  0)] = Side.Right;
+	directionTable[Point( 1,  1)] = Side.BottomRight;
+	directionTable[Point( 0,  1)] = Side.Bottom;
+	directionTable[Point(-1,  1)] = Side.BottomLeft;
+	directionTable[Point(-1,  0)] = Side.Left;
+	directionTable[Point(-1, -1)] = Side.TopLeft;
+	
+	foreach(Point offset, Side side; directionTable)
+		offsetTable[side] = offset;
 }

@@ -89,9 +89,22 @@ void main(string[] args) {
 		if(input[GO_RIGHT_KEY] == OnOffState.TurnedOn)
 			movement.x += 1;
 		
+		// Remove second axis
+		if(movement.x && movement.y) {
+			if(player.facing & Side.Horizontal) 
+				movement.x = 0;
+			else
+				movement.y = 0;
+		}
+		
 		// Change facing
 		changeFacing(player.facing, movement);
-		player.position += movement;
+		
+		// Move player
+		Side direction = getDirection(movement);
+		if(stage.canGo(player.position, direction)) {
+			player.position += movement;
+		}
 		
 		// Draw stuff
 		window.clear(BACKGROUND_COLOR);
