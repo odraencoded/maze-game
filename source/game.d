@@ -17,10 +17,29 @@ enum OnOffState {
 	TurnedOn = Changed | On
 }
 
+enum Side {
+	None        = 0,
+	Top         = 1,
+	TopRight    = 2,
+	Right       = 4,
+	BottomRight = 8,
+	Bottom      = 16,
+	BottomLeft  = 32,
+	Left        = 64,
+	TopLeft     = 128,
+	
+	Up = Top,
+	Down = Bottom,
+	
+	Vertical = Top | Bottom,
+	Horizontal = Left | Right,
+}
+
 class Stage {
 	Pusher player;
 }
 
 class Pusher {
 	Point position;
+	Side facing = Side.Down;
 }

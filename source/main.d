@@ -32,11 +32,7 @@ void main(string[] args) {
 	input[GO_LEFT_KEY] = OnOffState.Off;
 	
 	// Setup sprites
-	VertexArray playerSprite = new VertexArray(PrimitiveType.Triangles, 3);
-	playerSprite[0].position = Vector2f(2, 2);
-	playerSprite[1].position = Vector2f(14, 2);
-	playerSprite[2].position = Vector2f(8, 12);
-	for(int i=0; i<3; i++) playerSprite[i].color = Color.White;
+	VertexArray[int] playerSprites = setupPlayerSprites();
 	
 	// Main loop
 	game.isRunning = true;
@@ -91,6 +87,8 @@ void main(string[] args) {
 		if(input[GO_RIGHT_KEY] == OnOffState.TurnedOn)
 			movement.x += 1;
 		
+		// Change facing
+		changeFacing(player.facing, movement);		
 		player.position += movement;
 		
 		// Draw stuff
@@ -104,6 +102,8 @@ void main(string[] args) {
 			player.position.x * BLOCK_SIZE,
 			player.position.y * BLOCK_SIZE
 		);
+		
+		auto playerSprite = playerSprites[player.facing];
 		
 		window.draw(playerSprite, state);
 		window.display();
@@ -121,4 +121,59 @@ private Stage setupTestStage() {
 	auto stage = new Stage();
 	stage.player = new Pusher();
 	return stage;
+}
+
+private VertexArray[int] setupPlayerSprites() {
+	VertexArray[int] sprites;
+	
+	VertexArray down = new VertexArray(PrimitiveType.Triangles, 3);
+	down[0].position = Vector2f(2, 2);
+	down[1].position = Vector2f(14, 2);
+	down[2].position = Vector2f(8, 12);
+	for(int i=0; i<3; i++) down[i].color = Color.White;
+	
+	VertexArray up = new VertexArray(PrimitiveType.Triangles, 3);
+	up[0].position = Vector2f(2, 14);
+	up[1].position = Vector2f(14, 14);
+	up[2].position = Vector2f(8, 4);
+	for(int i=0; i<3; i++) up[i].color = Color.White;
+	
+	VertexArray right = new VertexArray(PrimitiveType.Triangles, 3);
+	right[0].position = Vector2f(2, 2);
+	right[1].position = Vector2f(2, 14);
+	right[2].position = Vector2f(12, 8);
+	for(int i=0; i<3; i++) right[i].color = Color.White;
+	
+	VertexArray left = new VertexArray(PrimitiveType.Triangles, 3);
+	left[0].position = Vector2f(14, 2);
+	left[1].position = Vector2f(14, 14);
+	left[2].position = Vector2f(4, 8);
+	for(int i=0; i<3; i++) left[i].color = Color.White;
+	
+	sprites[Side.Up] = up;
+	sprites[Side.Down] = down;
+	sprites[Side.Left] = left;
+	sprites[Side.Right] = right;
+	
+	return sprites;
+}
+
+private void changeFacing(ref Side facing, Point direction) {
+	if(direction.x != 0) {
+		if(direction.y != 0 && (facing & Side.Vertical) != 0) {
+			goto VerticalFacingCheck;
+		}
+		
+		if (direction.x < 0) {
+			facing = Side.Left;
+		} else {
+			facing = Side.Right;
+		}
+	} else {
+		VerticalFacingCheck:
+		if(direction.y < 0)
+			facing = Side.Up;
+		else if(direction.y > 0)
+			facing = Side.Down;
+	}
 }
