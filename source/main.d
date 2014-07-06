@@ -110,31 +110,43 @@ void main(string[] args) {
 				movement.y = 0;
 		}
 		
-		// Change facing
-		if(!player.isGrabbing)
-			changeFacing(player.facing, movement);
-		
 		// Move player
 		Side direction = getDirection(movement);
 		
 		// Check if player can move
 		bool canMove = stage.canGo(player.position, direction);
-		
-		// Check if grabbed item can move
-		if(canMove && player.isGrabbing) {
-			foreach(Point block; player.grabbedItem.blocks) {
-				block += player.grabbedItem.position;
-				if(!stage.canGo(block, direction)) {
-					canMove = false;
-					break;
+		if(canMove) {
+			// Check if grabbed item can move
+			bool canGrabMove = false;
+			if(player.isGrabbing) {
+				canGrabMove = true;
+				foreach(Point block; player.grabbedItem.blocks) {
+					block += player.grabbedItem.position;
+					if(!stage.canGo(block, direction)) {
+						canGrabMove = false;
+						break;
+					}
 				}
 			}
-		}
-		
-		if(canMove) {
-			player.position += movement;
-			if(player.isGrabbing)
+			
+			if(canGrabMove) {
+				// Grab exists and can move
+				// Move grabbed item, don't change facing
 				player.grabbedItem.position += movement;
+			} else {
+				// Grab can't move, but player can
+				// Release grabbed item and change facing
+				if(player.isGrabbing)
+					player.releaseItem();
+				
+				changeFacing(player.facing, movement);
+			}
+			
+			// Move player
+			player.position += movement;
+		} else if(!player.isGrabbing) {
+			// Can't move, but isn't grabbing anything, just change facing
+			changeFacing(player.facing, movement);
 		}
 		
 		// Draw stuff
