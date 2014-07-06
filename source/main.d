@@ -20,6 +20,8 @@ enum GRAB_KEY = Keyboard.Key.D;
 enum BLOCK_SIZE = 16;
 enum BACKGROUND_COLOR = Color(64, 64, 64, 255);
 
+enum AUTO_RELEASE = false;
+
 void main(string[] args) {
 	Game game = new Game();
 	
@@ -130,7 +132,14 @@ void main(string[] args) {
 		}
 		
 		// Check if player can move
-		bool canMove = stage.canGo(player.position, direction, canGrabMove);
+		bool canMove;
+		if(!AUTO_RELEASE && player.isGrabbing && !canGrabMove)
+			// If AUTO_RELEASE is off and the grab can't move,
+			// the player can't move either
+			canMove = false;
+		else
+			canMove = stage.canGo(player.position, direction, canGrabMove);
+		
 		if(canMove) {
 			if(canGrabMove) {
 				// Grab exists and can move
