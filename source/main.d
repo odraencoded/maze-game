@@ -12,6 +12,7 @@ enum GO_UP_KEY = Keyboard.Key.I;
 enum GO_RIGHT_KEY = Keyboard.Key.L;
 enum GO_DOWN_KEY = Keyboard.Key.K;
 enum GO_LEFT_KEY = Keyboard.Key.J;
+enum GRAB_KEY = Keyboard.Key.D;
 
 enum BLOCK_SIZE = 16;
 enum BACKGROUND_COLOR = Color(64, 64, 64, 255);
@@ -32,6 +33,7 @@ void main(string[] args) {
 	input[GO_RIGHT_KEY] = OnOffState.Off;
 	input[GO_DOWN_KEY] = OnOffState.Off;
 	input[GO_LEFT_KEY] = OnOffState.Off;
+	input[GRAB_KEY] = OnOffState.Off;
 	
 	// Setup sprites
 	VertexArray[int] playerSprites = setupPlayerSprites();
@@ -77,6 +79,17 @@ void main(string[] args) {
 		game.isRunning = game.isRunning && window.isOpen();
 		if(!game.isRunning)
 			break;
+		
+		// Grab walls
+		if(input[GRAB_KEY] == OnOffState.TurnedOn) {
+			if(player.isGrabbing) {
+				player.releaseItem();
+			} else {
+				auto wall = stage.getItem(player.position, player.facing);
+				if(wall)
+					player.grabItem(wall);
+			}
+		}
 		
 		// Move player
 		Point movement;
@@ -218,7 +231,8 @@ private void changeFacing(ref Side facing, Point direction) {
 }
 
 private void renderWall(Wall wall, RenderTarget target) {
-	enum fillColor = Color.Black;
+	enum ungrabbedColor = Color.Black;
+	enum grabbedColor = Color.Red;
 	enum inkColor = Color.White;
 	enum inkWidth = 1;
 	
@@ -255,6 +269,8 @@ private void renderWall(Wall wall, RenderTarget target) {
 		vertexArray[fillIndex + 1].position = Vector2f(r, t);
 		vertexArray[fillIndex + 2].position = Vector2f(r, b);
 		vertexArray[fillIndex + 3].position = Vector2f(l, b);
+		
+		auto fillColor = wall.isGrabbed ? grabbedColor : ungrabbedColor;
 		
 		for(int j = fillIndex; j < fillIndex + 4; j++)
 			vertexArray[j].color = fillColor;

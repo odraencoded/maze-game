@@ -50,16 +50,40 @@ class Stage {
 		}
 		return true;
 	}
+	
+	Wall getItem(Point position, Side direction) {
+		auto offset = getOffset(direction);
+		position += offset;
+		foreach(Wall wall; walls) {
+			if(canFind(wall.blocks, position - wall.position))
+				return wall;
+		}
+		return null;
+	}
 }
 
 class Pusher {
 	Point position;
 	Side facing = Side.Down;
+	
+	Wall grabbedItem;
+	bool isGrabbing() const { return !(grabbedItem is null); }
+	
+	void grabItem(Wall item) {
+		item.isGrabbed = true;
+		grabbedItem = item;
+	}
+	
+	void releaseItem() {
+		grabbedItem.isGrabbed = false;
+		grabbedItem = null;
+	}
 }
 
 class Wall {
 	Point position;
 	Point[] blocks;
+	bool isGrabbed;
 }
 
 Side getDirection(Point offset) {
