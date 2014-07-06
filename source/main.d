@@ -148,7 +148,16 @@ private Stage setupTestStage() {
 		Point(0, 2), Point(1, 2),
 	];
 	LWall.position = Point(3, 3);
+	
+	auto SquareWall = new Wall();
+	SquareWall.blocks = [
+		Point(0, 0), Point(1, 0),
+		Point(0, 1), Point(1, 1), 
+	];
+	SquareWall.position = Point(4, 3);
+	
 	stage.walls ~= LWall;
+	stage.walls ~= SquareWall;
 	
 	return stage;
 }
