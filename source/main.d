@@ -220,6 +220,7 @@ private void changeFacing(ref Side facing, Point direction) {
 private void renderWall(Wall wall, RenderTarget target) {
 	enum fillColor = Color.Black;
 	enum inkColor = Color.White;
+	enum inkWidth = 1;
 	
 	const int vertexCount = 8 * wall.blocks.length;
 	auto vertexArray = new VertexArray(PrimitiveType.Quads, vertexCount);
@@ -245,10 +246,10 @@ private void renderWall(Wall wall, RenderTarget target) {
 		outlines[Side.Bottom] = !canFind(wall.blocks, block + Point( 0,  1));
 		outlines[Side.Left  ] = !canFind(wall.blocks, block + Point(-1,  0));
 		
-		if(outlines[Side.Top   ]) t += BLOCK_SIZE / 8;
-		if(outlines[Side.Right ]) r -= BLOCK_SIZE / 8;
-		if(outlines[Side.Bottom]) b -= BLOCK_SIZE / 8;
-		if(outlines[Side.Left  ]) l += BLOCK_SIZE / 8;
+		if(outlines[Side.Top   ]) t += inkWidth;
+		if(outlines[Side.Right ]) r -= inkWidth;
+		if(outlines[Side.Bottom]) b -= inkWidth;
+		if(outlines[Side.Left  ]) l += inkWidth;
 		
 		vertexArray[fillIndex + 0].position = Vector2f(l, t);
 		vertexArray[fillIndex + 1].position = Vector2f(r, t);
