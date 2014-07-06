@@ -115,54 +115,69 @@ void main(string[] args) {
 				movement.y = 0;
 		}
 		
-		// Move player
-		Side direction = getDirection(movement);
-		
-		// Check if grabbed item can move
-		bool canGrabMove = false;
-		if(player.isGrabbing) {
-			canGrabMove = true;
-			foreach(Point block; player.grabbedItem.blocks) {
-				block += player.grabbedItem.position;
-				if(!stage.canGo(block, direction, true)) {
-					canGrabMove = false;
-					break;
+		bool playerMoved = false;
+			if(movement.x || movement.y) {
+			// Move player
+			Side direction = getDirection(movement);
+			
+			// Check if grabbed item can move
+			bool canGrabMove = false;
+			if(player.isGrabbing) {
+				canGrabMove = true;
+				foreach(Point block; player.grabbedItem.blocks) {
+					block += player.grabbedItem.position;
+					if(!stage.canGo(block, direction, true)) {
+						canGrabMove = false;
+						break;
+					}
 				}
+			}
+			
+			// Check if player can move
+			bool canMove;
+			if(!AUTO_RELEASE && player.isGrabbing && !canGrabMove)
+				// If AUTO_RELEASE is off and the grab can't move,
+				// the player can't move either
+				canMove = false;
+			else
+				canMove = stage.canGo(player.position, direction, canGrabMove);
+			
+			if(canMove) {
+				if(canGrabMove) {
+					// Grab exists and can move
+					// Move grabbed item, don't change facing
+					player.grabbedItem.position += movement;
+				} else {
+					// Grab can't move, but player can
+					// Release grabbed item and change facing
+					if(player.isGrabbing)
+						player.releaseItem();
+					
+					changeFacing(player.facing, movement);
+				}
+				
+				// Move player
+				player.position += movement;
+				playerMoved = true;
+			} else if(!player.isGrabbing) {
+				// Can't move, but isn't grabbing anything, just change facing
+				changeFacing(player.facing, movement);
 			}
 		}
 		
-		// Check if player can move
-		bool canMove;
-		if(!AUTO_RELEASE && player.isGrabbing && !canGrabMove)
-			// If AUTO_RELEASE is off and the grab can't move,
-			// the player can't move either
-			canMove = false;
-		else
-			canMove = stage.canGo(player.position, direction, canGrabMove);
-		
-		if(canMove) {
-			if(canGrabMove) {
-				// Grab exists and can move
-				// Move grabbed item, don't change facing
-				player.grabbedItem.position += movement;
-			} else {
-				// Grab can't move, but player can
-				// Release grabbed item and change facing
-				if(player.isGrabbing)
-					player.releaseItem();
-				
-				changeFacing(player.facing, movement);
+		if(playerMoved) {
+			if(stage.isOnExit(player.position)) {
+				writefln("You win!");
 			}
-			
-			// Move player
-			player.position += movement;
-		} else if(!player.isGrabbing) {
-			// Can't move, but isn't grabbing anything, just change facing
-			changeFacing(player.facing, movement);
 		}
 		
 		// Draw stuff
 		window.clear(BACKGROUND_COLOR);
+		
+		// Draw exits
+		foreach(Exit exit; stage.exits) {
+			renderExit(exit, window);
+		}
 		
 		// Draw player
 		RenderStates state;
@@ -179,6 +194,7 @@ void main(string[] args) {
 		foreach(Wall wall; stage.walls) {
 			renderWall(wall, window);
 		}
+		
 		
 		window.display();
 		
@@ -238,6 +254,11 @@ private Stage setupTestStage() {
 		borderWall.blocks ~= Point(left, y);
 		borderWall.blocks ~= Point(right, y);
 	}
+	
+	// Add an exit
+	auto exit = new Exit();
+	exit.position = Point(6, 6);
+	stage.exits ~= exit;
 	
 	return stage;
 }
@@ -350,6 +371,32 @@ private void renderWall(Wall wall, RenderTarget target) {
 	states.transform.translate(
 		wall.position.x * BLOCK_SIZE,
 		wall.position.y * BLOCK_SIZE
+	);
+	
+	target.draw(vertexArray, states);
+}
+
+private void renderExit(Exit exit, RenderTarget target) {
+	enum exitColor = Color.White;
+	
+	auto vertexArray = new VertexArray(PrimitiveType.Quads, 4);
+	
+	int t, r, b, l;
+	l = t = 0;
+	b = r = BLOCK_SIZE;
+	
+	vertexArray[0].position = Vector2f(l, t);
+	vertexArray[1].position = Vector2f(r, t);
+	vertexArray[2].position = Vector2f(r, b);
+	vertexArray[3].position = Vector2f(l, b);
+	
+	for(int i=0; i < 4; i++)
+		vertexArray[i].color = exitColor;
+	
+	RenderStates states;
+	states.transform.translate(
+		exit.position.x * BLOCK_SIZE,
+		exit.position.y * BLOCK_SIZE
 	);
 	
 	target.draw(vertexArray, states);

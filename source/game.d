@@ -41,6 +41,16 @@ enum Side {
 class Stage {
 	Pusher player;
 	Wall[] walls;
+	Exit[] exits;
+	
+	bool isOnExit(Point point) {
+		foreach(Exit exit; exits) {
+			if(exit.position == point)
+				return true;
+		}
+		return false;
+	}
+	
 	bool canGo(Point position, Side direction, bool skippedGrabbed) {
 		position += getOffset(direction);
 		
@@ -87,6 +97,10 @@ class Wall {
 	Point[] blocks;
 	bool isGrabbed;
 	bool isFixed;
+}
+
+class Exit {
+	Point position;
 }
 
 Side getDirection(Point offset) {
