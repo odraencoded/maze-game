@@ -42,18 +42,20 @@ class Stage {
 	Pusher player;
 	Wall[] walls;
 	bool canGo(Point position, Side direction) {
-		auto offset = getOffset(direction);
-		auto newPosition = position + offset;
+		position += getOffset(direction);
+		
 		foreach(Wall wall; walls) {
-			if(canFind(wall.blocks, newPosition - wall.position))
-				return false;
+			if(!wall.isGrabbed) {
+				if(canFind(wall.blocks, position - wall.position))
+					return false;
+			}
 		}
 		return true;
 	}
 	
 	Wall getItem(Point position, Side direction) {
-		auto offset = getOffset(direction);
-		position += offset;
+		position += getOffset(direction);
+		
 		foreach(Wall wall; walls) {
 			if(canFind(wall.blocks, position - wall.position))
 				return wall;

@@ -115,8 +115,25 @@ void main(string[] args) {
 		
 		// Move player
 		Side direction = getDirection(movement);
-		if(stage.canGo(player.position, direction)) {
+		
+		// Check if player can move
+		bool canMove = stage.canGo(player.position, direction);
+		
+		// Check if grabbed item can move
+		if(canMove && player.isGrabbing) {
+			foreach(Point block; player.grabbedItem.blocks) {
+				block += player.grabbedItem.position;
+				if(!stage.canGo(block, direction)) {
+					canMove = false;
+					break;
+				}
+			}
+		}
+		
+		if(canMove) {
 			player.position += movement;
+			if(player.isGrabbing)
+				player.grabbedItem.position += movement;
 		}
 		
 		// Draw stuff
