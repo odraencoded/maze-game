@@ -1,6 +1,9 @@
-import dsfml.graphics;
 import std.stdio;
 import std.algorithm;
+import core.memory;
+
+import dsfml.graphics;
+
 import game;
 
 enum GAME_WIDTH = 320;
@@ -169,6 +172,9 @@ void main(string[] args) {
 		}
 		
 		window.display();
+		
+		// Cleaning up the trash
+		GC.collect();
 	}
 }
 
