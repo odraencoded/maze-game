@@ -113,22 +113,22 @@ void main(string[] args) {
 		// Move player
 		Side direction = getDirection(movement);
 		
-		// Check if player can move
-		bool canMove = stage.canGo(player.position, direction);
-		if(canMove) {
-			// Check if grabbed item can move
-			bool canGrabMove = false;
-			if(player.isGrabbing) {
-				canGrabMove = true;
-				foreach(Point block; player.grabbedItem.blocks) {
-					block += player.grabbedItem.position;
-					if(!stage.canGo(block, direction)) {
-						canGrabMove = false;
-						break;
-					}
+		// Check if grabbed item can move
+		bool canGrabMove = false;
+		if(player.isGrabbing) {
+			canGrabMove = true;
+			foreach(Point block; player.grabbedItem.blocks) {
+				block += player.grabbedItem.position;
+				if(!stage.canGo(block, direction, true)) {
+					canGrabMove = false;
+					break;
 				}
 			}
-			
+		}
+		
+		// Check if player can move
+		bool canMove = stage.canGo(player.position, direction, canGrabMove);
+		if(canMove) {
 			if(canGrabMove) {
 				// Grab exists and can move
 				// Move grabbed item, don't change facing

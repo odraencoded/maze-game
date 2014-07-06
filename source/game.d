@@ -41,11 +41,11 @@ enum Side {
 class Stage {
 	Pusher player;
 	Wall[] walls;
-	bool canGo(Point position, Side direction) {
+	bool canGo(Point position, Side direction, bool skippedGrabbed) {
 		position += getOffset(direction);
 		
 		foreach(Wall wall; walls) {
-			if(!wall.isGrabbed) {
+			if(!(skippedGrabbed && wall.isGrabbed)) {
 				if(canFind(wall.blocks, position - wall.position))
 					return false;
 			}
