@@ -111,7 +111,8 @@ void main(string[] args) {
 		}
 		
 		// Change facing
-		changeFacing(player.facing, movement);
+		if(!player.isGrabbing)
+			changeFacing(player.facing, movement);
 		
 		// Move player
 		Side direction = getDirection(movement);
