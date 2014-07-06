@@ -20,6 +20,7 @@ enum GRAB_KEY = Keyboard.Key.D;
 enum BLOCK_SIZE = 16;
 enum BACKGROUND_COLOR = Color(64, 64, 64, 255);
 
+enum SWITCH_GRIP = false;
 enum AUTO_RELEASE = false;
 
 void main(string[] args) {
@@ -86,10 +87,28 @@ void main(string[] args) {
 			break;
 		
 		// Grab walls
-		if(input[GRAB_KEY] == OnOffState.TurnedOn) {
-			if(player.isGrabbing) {
+		bool grabItem, releaseItem;
+		if(SWITCH_GRIP) {
+			// Press once = on, press again = off
+			if(input[GRAB_KEY] == OnOffState.TurnedOn) {
+				if(player.isGrabbing)
+					releaseItem = true;
+				else
+					grabItem = true;
+			}
+		} else {
+			// Hold key = on, release key = off
+			if(input[GRAB_KEY] & OnOffState.On)
+				grabItem = true;
+			else
+				releaseItem = true;
+		}
+		
+		if(player.isGrabbing) {
+			if(releaseItem)
 				player.releaseItem();
-			} else {
+		} else {
+			if(grabItem) {
 				auto wall = stage.getItem(player.position, player.facing);
 				if(wall && !wall.isFixed)
 					player.grabItem(wall);
@@ -116,7 +135,7 @@ void main(string[] args) {
 		}
 		
 		bool playerMoved = false;
-			if(movement.x || movement.y) {
+		if(movement.x || movement.y) {
 			// Move player
 			Side direction = getDirection(movement);
 			
