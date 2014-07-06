@@ -89,7 +89,7 @@ void main(string[] args) {
 				player.releaseItem();
 			} else {
 				auto wall = stage.getItem(player.position, player.facing);
-				if(wall)
+				if(wall && !wall.isFixed)
 					player.grabItem(wall);
 			}
 		}
@@ -187,26 +187,48 @@ private RenderWindow setupWindow() {
 
 private Stage setupTestStage() {
 	auto stage = new Stage();
+	
+	// Create player
 	stage.player = new Pusher();
+	stage.player.position = Point(2, 2);
 	
-	// Setup test walls
-	auto LWall = new Wall();
-	LWall.blocks = [
-		Point(0, 0),
-		Point(0, 1),
-		Point(0, 2), Point(1, 2),
+	// Wall block data
+	auto walls = [
+		[
+			Point(3, 2),
+			Point(3, 3), Point(4, 3),
+			Point(3, 4), 
+		], [
+			                          Point(4, 4),
+			Point(2, 5), Point(3, 5), Point(4, 5), 
+		], [
+			Point(5, 4),
+			Point(5, 5), Point(6, 5),
+			Point(5, 6), 
+		]
 	];
-	LWall.position = Point(3, 3);
 	
-	auto SquareWall = new Wall();
-	SquareWall.blocks = [
-		Point(0, 0), Point(1, 0),
-		Point(0, 1), Point(1, 1), 
-	];
-	SquareWall.position = Point(4, 3);
+	foreach(Point[] wallBlocks; walls) {
+		auto newWall = new Wall();
+		newWall.blocks = wallBlocks;
+		stage.walls ~= newWall;
+	}
 	
-	stage.walls ~= LWall;
-	stage.walls ~= SquareWall;
+	// Creates a fixed wall surrounding the stage
+	auto borderWall = new Wall();
+	borderWall.isFixed = true;
+	stage.walls ~= borderWall;
+	
+	int top = 1, left = 1, right = 7, bottom = 7;
+	for(int x=left; x<=right; x++) {
+		borderWall.blocks ~= Point(x, top);
+		borderWall.blocks ~= Point(x, bottom);
+	}
+	
+	for(int y=top + 1; y<=bottom - 1; y++) {
+		borderWall.blocks ~= Point(left, y);
+		borderWall.blocks ~= Point(right, y);
+	}
 	
 	return stage;
 }
@@ -310,10 +332,11 @@ private void renderWall(Wall wall, RenderTarget target) {
 		
 		for(int j = fillIndex; j < fillIndex + 4; j++)
 			vertexArray[j].color = fillColor;
+		
 		for(int j = inkIndex; j < inkIndex + 4; j++)
-			vertexArray[j].color = inkColor;
+			vertexArray[j].color = wall.isFixed ? fillColor : inkColor;
 	}
-	
+
 	RenderStates states;
 	states.transform.translate(
 		wall.position.x * BLOCK_SIZE,

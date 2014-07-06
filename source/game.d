@@ -86,6 +86,7 @@ class Wall {
 	Point position;
 	Point[] blocks;
 	bool isGrabbed;
+	bool isFixed;
 }
 
 Side getDirection(Point offset) {
