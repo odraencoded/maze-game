@@ -42,6 +42,10 @@ public Stage LoadStage(string path) {
 						break;
 					}
 				}
+			} else if(pixel == EXIT_COLOR) {
+				auto newExit = new Exit();
+				newExit.position = position;
+				newStage.exits ~= newExit;
 			}
 		}
 	}
