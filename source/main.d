@@ -6,7 +6,7 @@ import core.memory;
 import dsfml.graphics;
 
 import game;
-import stage;
+import course;
 import geometry;
 
 alias slash = dirSeparator;
@@ -36,8 +36,10 @@ void main(string[] args) {
 	// Open Window
 	auto window = game.window = setupWindow();
 	
-	// Create test stage
-	auto stage = game.stage = setupTestStage();
+	// Create test course
+	game.progress = 0;
+	auto course = game.course = setupTestCourse();
+	auto stage = game.stage = game.course.buildStage(game.progress);
 	auto player = stage.player;
 	
 	// Setup input
@@ -236,8 +238,13 @@ private RenderWindow setupWindow() {
 	return window;
 }
 
-private Stage setupTestStage() {
-	return LoadStage(TEST_STAGE_PATH);
+private Course setupTestCourse() {
+	auto course = new Course();
+	
+	auto firstStage = new BitmapStageLoader(TEST_STAGE_PATH);
+	course.stageGens ~= firstStage;
+	
+	return course;
 }
 
 private VertexArray[int] setupPlayerSprites() {

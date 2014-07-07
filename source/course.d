@@ -10,6 +10,42 @@ enum EXIT_COLOR = Color.Blue;
 enum WALL_COLOR = Color.Black;
 enum FIXED_WALL_COLOR = Color.Red;
 
+
+/**
+ * A course is a collection of stages.
+ */
+class Course {
+	Stage buildStage(int index) const {
+		return stageGens[index].buildStage();
+	}
+	
+	StageGenerator[] stageGens;
+}
+
+/**
+ * Generates a stage. Duh.
+ */
+interface StageGenerator {
+	Stage buildStage() const;
+}
+
+/**
+ * Creates a stage from a bitmap file.
+ */
+class BitmapStageLoader : StageGenerator {
+	string path;
+	this(string path) {
+		this.path = path;
+	}
+	
+	Stage buildStage() const {
+		return LoadStage(path);
+	}
+}
+
+/**
+ * Parses a bitmap file into a stage.
+ */
 public Stage LoadStage(string path) {
 	Image bitmap = new Image();
 	if(!bitmap.loadFromFile(path))
