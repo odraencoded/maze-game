@@ -1,10 +1,14 @@
 import std.stdio;
 import std.algorithm;
+import std.path;
 import core.memory;
 
 import dsfml.graphics;
 
 import game;
+import stage;
+
+alias slash = dirSeparator;
 
 enum GAME_WIDTH = 320;
 enum GAME_HEIGHT = 180;
@@ -22,6 +26,8 @@ enum BACKGROUND_COLOR = Color(64, 64, 64, 255);
 
 enum SWITCH_GRIP = false;
 enum AUTO_RELEASE = false;
+
+enum TEST_STAGE_PATH = "resources" ~ slash ~ "test" ~ slash  ~ "test-stage.png";
 
 void main(string[] args) {
 	Game game = new Game();
@@ -230,56 +236,7 @@ private RenderWindow setupWindow() {
 }
 
 private Stage setupTestStage() {
-	auto stage = new Stage();
-	
-	// Create player
-	stage.player = new Pusher();
-	stage.player.position = Point(2, 2);
-	
-	// Wall block data
-	auto walls = [
-		[
-			Point(3, 2),
-			Point(3, 3), Point(4, 3),
-			Point(3, 4), 
-		], [
-			                          Point(4, 4),
-			Point(2, 5), Point(3, 5), Point(4, 5), 
-		], [
-			Point(5, 4),
-			Point(5, 5), Point(6, 5),
-			Point(5, 6), 
-		]
-	];
-	
-	foreach(Point[] wallBlocks; walls) {
-		auto newWall = new Wall();
-		newWall.blocks = wallBlocks;
-		stage.walls ~= newWall;
-	}
-	
-	// Creates a fixed wall surrounding the stage
-	auto borderWall = new Wall();
-	borderWall.isFixed = true;
-	stage.walls ~= borderWall;
-	
-	int top = 1, left = 1, right = 7, bottom = 7;
-	for(int x=left; x<=right; x++) {
-		borderWall.blocks ~= Point(x, top);
-		borderWall.blocks ~= Point(x, bottom);
-	}
-	
-	for(int y=top + 1; y<=bottom - 1; y++) {
-		borderWall.blocks ~= Point(left, y);
-		borderWall.blocks ~= Point(right, y);
-	}
-	
-	// Add an exit
-	auto exit = new Exit();
-	exit.position = Point(6, 6);
-	stage.exits ~= exit;
-	
-	return stage;
+	return LoadStage(TEST_STAGE_PATH);
 }
 
 private VertexArray[int] setupPlayerSprites() {
