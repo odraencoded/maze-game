@@ -20,7 +20,7 @@ Side getDirection(Point offset) {
  * A value such as Top | Right isn't equivalent to TopRight.
  * TopRight is one diagonal, Top | Right are two separate directions.
  */
-enum Side {
+enum Side : ubyte {
 	None        = 0,
 	Top         = 1,
 	TopRight    = 2,
@@ -56,7 +56,7 @@ Point getOffset(Side side) {
  * e.g getOpposite(Side.Right) == Side.Left
  */
 Side getOpposite(Side side) {
-	return oppositeTable[side];
+	return cast(Side)(side << 4 | side >> 4);
 }
 
 /**
@@ -80,7 +80,6 @@ public immutable Side[] CrossSides = [
 ];
 private immutable Side[Point] directionTable;
 private immutable Point[Side] offsetTable;
-private immutable Side[Side] oppositeTable;
 
 static this() {
 	// Initialize direction table
@@ -97,8 +96,4 @@ static this() {
 	// Initialize offsetTable, which is the inverse of the directionTable
 	foreach(Point offset, Side side; directionTable)
 		offsetTable[side] = offset;
-	
-	// Initialize oppositeTable
-	foreach(Point offset, Side side; directionTable)
-		oppositeTable[side] = getDirection(offset * -1);
 }
