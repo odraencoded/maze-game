@@ -113,8 +113,13 @@ Point getOffset(Side side) {
 	return offsetTable[side];
 }
 
+Side getOpposite(Side side) {
+	return oppositeTable[side];
+}
+
 private immutable Side[Point] directionTable;
 private immutable Point[Side] offsetTable;
+private immutable Side[Side] oppositeTable;
 
 static this() {
 	// Initialize direction table
@@ -130,4 +135,7 @@ static this() {
 	
 	foreach(Point offset, Side side; directionTable)
 		offsetTable[side] = offset;
+	
+	foreach(Point offset, Side side; directionTable)
+		oppositeTable[side] = getDirection(offset * -1);
 }
