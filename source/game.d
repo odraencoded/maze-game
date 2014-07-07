@@ -1,9 +1,8 @@
-import std.math;
 import std.algorithm;
 
 import dsfml.graphics;
 
-alias Point = Vector2!int;
+import geometry;
 
 class Game {
 	RenderWindow window;
@@ -18,35 +17,6 @@ enum OnOffState {
 	
 	TurnedOff = Changed | Off,
 	TurnedOn = Changed | On
-}
-
-enum Side {
-	None        = 0,
-	Top         = 1,
-	TopRight    = 2,
-	Right       = 4,
-	BottomRight = 8,
-	Bottom      = 16,
-	BottomLeft  = 32,
-	Left        = 64,
-	TopLeft     = 128,
-	
-	Up = Top,
-	Down = Bottom,
-	
-	Vertical = Top | Bottom,
-	Horizontal = Left | Right,
-}
-
-pure struct Box {
-	int left, top, width, height;
-	bool contains(Point p) const {
-		return p.x >= left && p.x < left + width &&
-		       p.y >= top && p.y < top + height;
-	}
-	int area() const @property {
-		return width * height;
-	}
 }
 
 class Stage {
@@ -112,44 +82,4 @@ class Wall {
 
 class Exit {
 	Point position;
-}
-
-Side getDirection(Point offset) {
-	if(offset.x) offset.x /= abs(offset.x);
-	if(offset.y) offset.y /= abs(offset.y);
-	return directionTable[offset];
-}
-
-Point getOffset(Side side) {
-	return offsetTable[side];
-}
-
-Side getOpposite(Side side) {
-	return oppositeTable[side];
-}
-
-public immutable Side[] CrossSides = [
-	Side.Top, Side.Right, Side.Bottom, Side.Left
-];
-private immutable Side[Point] directionTable;
-private immutable Point[Side] offsetTable;
-private immutable Side[Side] oppositeTable;
-
-static this() {
-	// Initialize direction table
-	directionTable[Point( 0,  0)] = Side.None;
-	directionTable[Point( 0, -1)] = Side.Top;
-	directionTable[Point( 1, -1)] = Side.TopRight;
-	directionTable[Point( 1,  0)] = Side.Right;
-	directionTable[Point( 1,  1)] = Side.BottomRight;
-	directionTable[Point( 0,  1)] = Side.Bottom;
-	directionTable[Point(-1,  1)] = Side.BottomLeft;
-	directionTable[Point(-1,  0)] = Side.Left;
-	directionTable[Point(-1, -1)] = Side.TopLeft;
-	
-	foreach(Point offset, Side side; directionTable)
-		offsetTable[side] = offset;
-	
-	foreach(Point offset, Side side; directionTable)
-		oppositeTable[side] = getDirection(offset * -1);
 }

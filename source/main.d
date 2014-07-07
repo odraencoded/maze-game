@@ -7,6 +7,7 @@ import dsfml.graphics;
 
 import game;
 import stage;
+import geometry;
 
 alias slash = dirSeparator;
 

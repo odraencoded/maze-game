@@ -3,6 +3,7 @@ import std.stdio;
 import dsfml.graphics;
 
 import game;
+import geometry;
 
 enum PLAYER_COLOR = Color.Green;
 enum EXIT_COLOR = Color.Blue;
