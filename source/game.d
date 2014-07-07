@@ -38,6 +38,17 @@ enum Side {
 	Horizontal = Left | Right,
 }
 
+pure struct Box {
+	int left, top, width, height;
+	bool contains(Point p) const {
+		return p.x >= left && p.x < left + width &&
+		       p.y >= top && p.y < top + height;
+	}
+	int area() const @property {
+		return width * height;
+	}
+}
+
 class Stage {
 	Pusher player;
 	Wall[] walls;
@@ -117,6 +128,9 @@ Side getOpposite(Side side) {
 	return oppositeTable[side];
 }
 
+public immutable Side[] CrossSides = [
+	Side.Top, Side.Right, Side.Bottom, Side.Left
+];
 private immutable Side[Point] directionTable;
 private immutable Point[Side] offsetTable;
 private immutable Side[Side] oppositeTable;
