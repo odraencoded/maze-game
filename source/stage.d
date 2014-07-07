@@ -4,9 +4,10 @@ import dsfml.graphics;
 
 import game;
 
-enum PLAYER_COLOR = Color.Red;
+enum PLAYER_COLOR = Color.Green;
 enum EXIT_COLOR = Color.Blue;
 enum WALL_COLOR = Color.Black;
+enum FIXED_WALL_COLOR = Color.Red;
 
 public Stage LoadStage(string path) {
 	Image bitmap = new Image();
@@ -47,7 +48,7 @@ public Stage LoadStage(string path) {
 				auto newExit = new Exit();
 				newExit.position = position;
 				newStage.exits ~= newExit;
-			} else if(pixel == WALL_COLOR) {
+			} else if(pixel == WALL_COLOR || pixel == FIXED_WALL_COLOR) {
 				Point[] blocks, points;
 				blocks ~= position;
 				points ~= position;
@@ -64,11 +65,13 @@ public Stage LoadStage(string path) {
 							if(validCheck) {
 								auto farPoint = checkPoint * 2;
 								auto nearPoint = farPoint - offset;
-								auto nearColor = bitmap.getPixel(nearPoint.x, nearPoint.y);
-								auto farColor = bitmap.getPixel(farPoint.x, farPoint.y);
+								auto nearColor = bitmap.getPixel(nearPoint.x,
+								                                 nearPoint.y);
+								auto farColor = bitmap.getPixel(farPoint.x,
+								                                farPoint.y);
 								
-								if(nearColor == farColor
-								   && farColor == WALL_COLOR) {
+								if(nearColor == farColor &&
+								   farColor == pixel) {
 									blocks ~= checkPoint;
 									newPoints ~= checkPoint;
 									checkedPoints[checkPoint] = true;
@@ -81,6 +84,8 @@ public Stage LoadStage(string path) {
 				
 				auto newWall = new Wall();
 				newWall.blocks = blocks;
+				if(pixel == FIXED_WALL_COLOR)
+					newWall.isFixed = true;
 				newStage.walls ~= newWall;
 			}
 		}
