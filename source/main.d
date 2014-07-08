@@ -28,7 +28,8 @@ enum BACKGROUND_COLOR = Color(64, 64, 64, 255);
 enum SWITCH_GRIP = false;
 enum AUTO_RELEASE = false;
 
-enum TEST_STAGE_PATH = "resources" ~ slash ~ "test" ~ slash  ~ "test-stage.png";
+enum TEST_PATH = "resources" ~ slash ~ "test";
+enum TEST_COURSE_PATH = TEST_PATH ~ slash  ~ "course";
 
 void main(string[] args) {
 	Game game = new Game();
@@ -195,7 +196,15 @@ void main(string[] args) {
 		
 		if(playerMoved) {
 			if(stage.isOnExit(player.position)) {
-				writefln("You win!");
+				// Change to the next stage
+				game.progress++;
+				if(game.progress < game.course.length) {
+					stage = game.stage = game.course.buildStage(game.progress);
+					player = stage.player;
+				} else {
+					// TODO: anything else!
+					return;
+				}
 			}
 		}
 		
@@ -239,12 +248,7 @@ private RenderWindow setupWindow() {
 }
 
 private Course setupTestCourse() {
-	auto course = new Course();
-	
-	auto firstStage = new BitmapStageLoader(TEST_STAGE_PATH);
-	course.stageGens ~= firstStage;
-	
-	return course;
+	return TEST_COURSE_PATH.loadCourse();
 }
 
 private VertexArray[int] setupPlayerSprites() {

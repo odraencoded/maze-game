@@ -15,6 +15,16 @@ enum FIXED_WALL_COLOR = Color.Red;
  * A course is a collection of stages.
  */
 class Course {
+	/**
+	 * The number of stages in this course.
+	 */
+	int length() const @property {
+		return stageGens.length;
+	}
+	
+	/**
+	 * Creates the selected stage and returns it.
+	 */
 	Stage buildStage(int index) const {
 		return stageGens[index].buildStage();
 	}
@@ -23,9 +33,76 @@ class Course {
 }
 
 /**
+ * Loads a course from a directory
+ */
+Course loadCourse(string directory) {
+	// It takes a lot of stuff to read a directory :/
+	import std.file;
+	import std.stdio;
+	import std.regex;
+	import std.path;
+	import std.array;
+	import std.conv;
+	
+	/**
+	 * The test format is(after the extension is stripped)
+	 * Numbers, dash, underscore or a space separator and then the stage name.
+	 * e.g: 02-My A-Maze-Ing Maze
+	 * The name part isn't required.
+	 */
+	enum stageFileRegex = regex(r"^(\d+)([-_ ](.+))?");
+	enum INDEX_CAPTURE_INDEX = 1;
+	enum STAGE_NAME_CAPTURE_INDEX = 3;
+	
+	struct StageFileEntry {
+		int index;
+		string name;
+		string path;
+	}
+	StageFileEntry[] stageFiles;
+	
+	foreach(string path; dirEntries(directory, SpanMode.shallow))
+	{
+		auto filename = baseName(stripExtension(path));
+		auto matches = match(filename, stageFileRegex);
+		if(matches) {
+			StageFileEntry newEntry;
+			newEntry.path = path;
+			
+			// Get the index of this stage
+			auto indexString = matches.captures[INDEX_CAPTURE_INDEX];
+			newEntry.index = indexString.to!int();
+			
+			// Set the stage name from the filename
+			if(matches.captures.length > STAGE_NAME_CAPTURE_INDEX)
+				newEntry.name = matches.captures[STAGE_NAME_CAPTURE_INDEX];
+			else
+				newEntry.name = null;
+			
+			// Find the position for this entry in the array
+			int i;
+			for(i = 0; i < stageFiles.length; i++) {
+				if(newEntry.index <= stageFiles[i].index)
+					break;
+			}
+			stageFiles.insertInPlace(i, newEntry);
+		}
+	}
+	
+	// Create a generator for each stage
+	Course result = new Course();
+	foreach(StageFileEntry entry; stageFiles) {
+		result.stageGens ~= new BitmapStageLoader(entry.path, entry.name);
+	}
+	
+	return result;
+}
+
+/**
  * Generates a stage. Duh.
  */
 interface StageGenerator {
+	string getName() const;
 	Stage buildStage() const;
 }
 
@@ -34,9 +111,14 @@ interface StageGenerator {
  */
 class BitmapStageLoader : StageGenerator {
 	string path;
-	this(string path) {
+	string name;
+	
+	this(string path, string name = null) {
 		this.path = path;
+		this.name = name;
 	}
+	
+	string getName() const { return name; }
 	
 	Stage buildStage() const {
 		return LoadStage(path);
