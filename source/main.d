@@ -37,9 +37,13 @@ void main(string[] args) {
 	// Open Window
 	auto window = game.window = setupWindow();
 	
-	// Create test course
+	// Setup game course
+	// If a directory wasn't passed in the arguments, load the test course
+	string coursePath = args.length > 1 ? args[1] : TEST_COURSE_PATH;
+	auto course = game.course = coursePath.loadCourse();
 	game.progress = 0;
-	auto course = game.course = setupTestCourse();
+	
+	// Setup first stage
 	auto stage = game.stage = game.course.buildStage(game.progress);
 	auto player = stage.player;
 	
@@ -245,10 +249,6 @@ private RenderWindow setupWindow() {
 	auto window = new RenderWindow(videoMode, GAME_TITLE);
 	window.setFramerateLimit(GAME_FRAMERATE);
 	return window;
-}
-
-private Course setupTestCourse() {
-	return TEST_COURSE_PATH.loadCourse();
 }
 
 private VertexArray[int] setupPlayerSprites() {
