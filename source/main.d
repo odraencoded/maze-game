@@ -145,63 +145,7 @@ void main(string[] args) {
 		if(input[GO_RIGHT_KEY] == OnOffState.TurnedOn)
 			movement.x += 1;
 		
-		// Remove second axis
-		if(movement.x && movement.y) {
-			if(player.facing & Side.Horizontal) 
-				movement.x = 0;
-			else
-				movement.y = 0;
-		}
-		
-		bool playerMoved = false;
-		if(movement.x || movement.y) {
-			// Move player
-			Side direction = getDirection(movement);
-			
-			// Check if grabbed item can move
-			bool canGrabMove = false;
-			if(player.isGrabbing) {
-				canGrabMove = true;
-				foreach(Point block; player.grabbedItem.blocks) {
-					block += player.grabbedItem.position;
-					if(!stage.canGo(block, direction, true)) {
-						canGrabMove = false;
-						break;
-					}
-				}
-			}
-			
-			// Check if player can move
-			bool canMove;
-			if(!AUTO_RELEASE && player.isGrabbing && !canGrabMove)
-				// If AUTO_RELEASE is off and the grab can't move,
-				// the player can't move either
-				canMove = false;
-			else
-				canMove = stage.canGo(player.position, direction, canGrabMove);
-			
-			if(canMove) {
-				if(canGrabMove) {
-					// Grab exists and can move
-					// Move grabbed item, don't change facing
-					player.grabbedItem.position += movement;
-				} else {
-					// Grab can't move, but player can
-					// Release grabbed item and change facing
-					if(player.isGrabbing)
-						player.releaseItem();
-					
-					changeFacing(player.facing, movement);
-				}
-				
-				// Move player
-				player.position += movement;
-				playerMoved = true;
-			} else if(!player.isGrabbing) {
-				// Can't move, but isn't grabbing anything, just change facing
-				changeFacing(player.facing, movement);
-			}
-		}
+		bool playerMoved = movePlayer(game, movement);
 		
 		if(playerMoved) {
 			if(stage.isOnExit(player.position)) {
@@ -411,4 +355,74 @@ private void setTitleFromStage(Window window, Stage stage) {
 	} else {
 		window.setTitle(GAME_TITLE);
 	}
+}
+
+/**
+ * Tries to move the player, returns whether it was actually moved.
+ */
+private bool movePlayer(Game game, Point movement) {
+	// Quickly return when movement is zero.
+	if(movement == Point(0, 0))
+		return false;
+	
+	// Memoize stuff
+	auto stage = game.stage;
+	auto player = stage.player;
+	
+	
+	// Remove second axis from movement
+	if(movement.x && movement.y) {
+		if(player.facing & Side.Horizontal) 
+			movement.x = 0;
+		else
+			movement.y = 0;
+	}
+	
+	Side direction = getDirection(movement);
+	
+	// Check if grabbed item can move
+	bool canGrabMove = false;
+	if(player.isGrabbing) {
+		canGrabMove = true;
+		foreach(Point block; player.grabbedItem.blocks) {
+			block += player.grabbedItem.position;
+			if(!stage.canGo(block, direction, true)) {
+				canGrabMove = false;
+				break;
+			}
+		}
+	}
+	
+	// Check if player can move
+	bool canMove;
+	if(!AUTO_RELEASE && player.isGrabbing && !canGrabMove)
+		// If AUTO_RELEASE is off and the grab can't move,
+		// the player can't move either
+		canMove = false;
+	else
+		canMove = stage.canGo(player.position, direction, canGrabMove);
+	
+	if(canMove) {
+		if(canGrabMove) {
+			// Grab exists and can move
+			// Move grabbed item, don't change facing
+			player.grabbedItem.position += movement;
+		} else {
+			// Grab can't move, but player can
+			// Release grabbed item and change facing
+			if(player.isGrabbing)
+				player.releaseItem();
+			
+			changeFacing(player.facing, movement);
+		}
+		
+		// Move player
+		player.position += movement;
+		return true;
+	} else if(!player.isGrabbing) {
+		// Can't move, but isn't grabbing anything, just change facing
+		changeFacing(player.facing, movement);
+	}
+	
+	return false;
 }
