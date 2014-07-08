@@ -26,7 +26,10 @@ class Course {
 	 * Creates the selected stage and returns it.
 	 */
 	Stage buildStage(int index) const {
-		return stageGens[index].buildStage();
+		auto aStageGen = stageGens[index];
+		auto stage = aStageGen.buildStage();
+		stage.title = aStageGen.getTitle();
+		return stage;
 	}
 	
 	StageGenerator[] stageGens;
@@ -46,9 +49,9 @@ Course loadCourse(string directory) {
 	
 	/**
 	 * The test format is(after the extension is stripped)
-	 * Numbers, dash, underscore or a space separator and then the stage name.
+	 * Numbers, dash, underscore or a space separator and then the stage title.
 	 * e.g: 02-My A-Maze-Ing Maze
-	 * The name part isn't required.
+	 * The title part isn't required.
 	 */
 	enum stageFileRegex = regex(r"^(\d+)([-_ ](.+))?");
 	enum INDEX_CAPTURE_INDEX = 1;
@@ -56,7 +59,7 @@ Course loadCourse(string directory) {
 	
 	struct StageFileEntry {
 		int index;
-		string name;
+		string title;
 		string path;
 	}
 	StageFileEntry[] stageFiles;
@@ -73,11 +76,8 @@ Course loadCourse(string directory) {
 			auto indexString = matches.captures[INDEX_CAPTURE_INDEX];
 			newEntry.index = indexString.to!int();
 			
-			// Set the stage name from the filename
-			if(matches.captures.length > STAGE_NAME_CAPTURE_INDEX)
-				newEntry.name = matches.captures[STAGE_NAME_CAPTURE_INDEX];
-			else
-				newEntry.name = null;
+			// Set the stage title from the filename
+			newEntry.title = matches.captures[STAGE_NAME_CAPTURE_INDEX];
 			
 			// Find the position for this entry in the array
 			int i;
@@ -92,7 +92,7 @@ Course loadCourse(string directory) {
 	// Create a generator for each stage
 	Course result = new Course();
 	foreach(StageFileEntry entry; stageFiles) {
-		result.stageGens ~= new BitmapStageLoader(entry.path, entry.name);
+		result.stageGens ~= new BitmapStageLoader(entry.path, entry.title);
 	}
 	
 	return result;
@@ -102,7 +102,7 @@ Course loadCourse(string directory) {
  * Generates a stage. Duh.
  */
 interface StageGenerator {
-	string getName() const;
+	string getTitle() const;
 	Stage buildStage() const;
 }
 
@@ -111,14 +111,14 @@ interface StageGenerator {
  */
 class BitmapStageLoader : StageGenerator {
 	string path;
-	string name;
+	string title;
 	
-	this(string path, string name = null) {
+	this(string path, string title = null) {
 		this.path = path;
-		this.name = name;
+		this.title = title;
 	}
 	
-	string getName() const { return name; }
+	string getTitle() const { return title; }
 	
 	Stage buildStage() const {
 		return LoadStage(path);

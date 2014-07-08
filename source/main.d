@@ -15,6 +15,7 @@ enum GAME_WIDTH = 320;
 enum GAME_HEIGHT = 180;
 enum GAME_FRAMERATE = 30;
 enum GAME_TITLE = "Maze Game";
+enum GAME_TITLE_SEPARATOR = " - ";
 
 enum GO_UP_KEY = Keyboard.Key.I;
 enum GO_RIGHT_KEY = Keyboard.Key.L;
@@ -46,6 +47,7 @@ void main(string[] args) {
 	// Setup first stage
 	auto stage = game.stage = game.course.buildStage(game.progress);
 	auto player = stage.player;
+	setTitleFromStage(game.window, stage);
 	
 	// Setup input
 	OnOffState[int] input;
@@ -205,6 +207,7 @@ void main(string[] args) {
 				if(game.progress < game.course.length) {
 					stage = game.stage = game.course.buildStage(game.progress);
 					player = stage.player;
+					setTitleFromStage(game.window, stage);
 				} else {
 					// TODO: anything else!
 					return;
@@ -388,4 +391,12 @@ private void renderExit(Exit exit, RenderTarget target) {
 	);
 	
 	target.draw(vertexArray, states);
+}
+
+private void setTitleFromStage(Window window, Stage stage) {
+	if(stage.title.length) {
+		window.setTitle(stage.title ~ GAME_TITLE_SEPARATOR ~ GAME_TITLE);
+	} else {
+		window.setTitle(GAME_TITLE);
+	}
 }

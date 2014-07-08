@@ -23,6 +23,7 @@ enum OnOffState {
 }
 
 class Stage {
+	string title;
 	Pusher player;
 	Wall[] walls;
 	Exit[] exits;
