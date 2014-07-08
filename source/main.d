@@ -37,6 +37,9 @@ void main(string[] args) {
 	
 	// Open Window
 	auto window = game.window = setupWindow();
+	auto camera = new Camera();
+	auto cameraView = new View();
+	cameraView.reset(FloatRect(0, 0, GAME_WIDTH, GAME_HEIGHT));
 	
 	// Setup game course
 	// If a directory wasn't passed in the arguments, load the test course
@@ -215,8 +218,17 @@ void main(string[] args) {
 			}
 		}
 		
+		// Update camera
+		camera.focus = Vector2f(player.position.x, player.position.y);
+		camera.update(frameDelta);
+		
 		// Draw stuff
 		window.clear(BACKGROUND_COLOR);
+		
+		// Set camera
+		enum centeringOffset = Vector2f(.5f, .5f);
+		cameraView.center = (camera.center + centeringOffset) * BLOCK_SIZE;
+		window.view = cameraView;
 		
 		// Draw exits
 		foreach(Exit exit; stage.exits) {

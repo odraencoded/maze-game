@@ -87,3 +87,14 @@ class Wall {
 class Exit {
 	Point position;
 }
+
+class Camera {
+	Vector2f center = Vector2f(0, 0);
+	Vector2f focus = Vector2f(0, 0);
+	Vector2f offset = Vector2f(0, 0);
+	Vector2f target() const @property { return focus + offset; }
+	
+	void update(float delta) {
+		center = target;
+	}
+}
