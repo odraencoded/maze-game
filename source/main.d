@@ -6,7 +6,7 @@ import core.memory;
 import dsfml.graphics;
 
 import game;
-import stage;
+import course;
 import geometry;
 
 alias slash = dirSeparator;
@@ -15,6 +15,7 @@ enum GAME_WIDTH = 320;
 enum GAME_HEIGHT = 180;
 enum GAME_FRAMERATE = 30;
 enum GAME_TITLE = "Maze Game";
+enum GAME_TITLE_SEPARATOR = " - ";
 
 enum GO_UP_KEY = Keyboard.Key.I;
 enum GO_RIGHT_KEY = Keyboard.Key.L;
@@ -28,7 +29,8 @@ enum BACKGROUND_COLOR = Color(64, 64, 64, 255);
 enum SWITCH_GRIP = false;
 enum AUTO_RELEASE = false;
 
-enum TEST_STAGE_PATH = "resources" ~ slash ~ "test" ~ slash  ~ "test-stage.png";
+enum TEST_PATH = "resources" ~ slash ~ "test";
+enum TEST_COURSE_PATH = TEST_PATH ~ slash  ~ "course";
 
 void main(string[] args) {
 	Game game = new Game();
@@ -36,9 +38,16 @@ void main(string[] args) {
 	// Open Window
 	auto window = game.window = setupWindow();
 	
-	// Create test stage
-	auto stage = game.stage = setupTestStage();
+	// Setup game course
+	// If a directory wasn't passed in the arguments, load the test course
+	string coursePath = args.length > 1 ? args[1] : TEST_COURSE_PATH;
+	auto course = game.course = coursePath.loadCourse();
+	game.progress = 0;
+	
+	// Setup first stage
+	auto stage = game.stage = game.course.buildStage(game.progress);
 	auto player = stage.player;
+	setTitleFromStage(game.window, stage);
 	
 	// Setup input
 	OnOffState[int] input;
@@ -193,7 +202,16 @@ void main(string[] args) {
 		
 		if(playerMoved) {
 			if(stage.isOnExit(player.position)) {
-				writefln("You win!");
+				// Change to the next stage
+				game.progress++;
+				if(game.progress < game.course.length) {
+					stage = game.stage = game.course.buildStage(game.progress);
+					player = stage.player;
+					setTitleFromStage(game.window, stage);
+				} else {
+					// TODO: anything else!
+					return;
+				}
 			}
 		}
 		
@@ -234,10 +252,6 @@ private RenderWindow setupWindow() {
 	auto window = new RenderWindow(videoMode, GAME_TITLE);
 	window.setFramerateLimit(GAME_FRAMERATE);
 	return window;
-}
-
-private Stage setupTestStage() {
-	return LoadStage(TEST_STAGE_PATH);
 }
 
 private VertexArray[int] setupPlayerSprites() {
@@ -377,4 +391,12 @@ private void renderExit(Exit exit, RenderTarget target) {
 	);
 	
 	target.draw(vertexArray, states);
+}
+
+private void setTitleFromStage(Window window, Stage stage) {
+	if(stage.title.length) {
+		window.setTitle(stage.title ~ GAME_TITLE_SEPARATOR ~ GAME_TITLE);
+	} else {
+		window.setTitle(GAME_TITLE);
+	}
 }

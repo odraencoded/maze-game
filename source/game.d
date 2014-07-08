@@ -3,12 +3,15 @@ import std.algorithm;
 import dsfml.graphics;
 
 import geometry;
+import course; 
 
 class Game {
 	RenderWindow window;
 	bool isRunning;
 	
+	Course course;
 	Stage stage;
+	int progress;
 }
 
 enum OnOffState {
@@ -20,6 +23,7 @@ enum OnOffState {
 }
 
 class Stage {
+	string title;
 	Pusher player;
 	Wall[] walls;
 	Exit[] exits;

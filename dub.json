@@ -6,6 +6,7 @@
 	"lflags" : ["+C:\\lib\\DSFML\\"],
 	"targetName" : "maze-game",
 	"targetPath" : "debug\\",
+	"buildRequirements": ["allowWarnings"],
 	"dependencies": {
 		"dsfml:graphics": "~master",
 	},
