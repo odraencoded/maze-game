@@ -5,6 +5,8 @@ import dsfml.graphics;
 import geometry;
 import course; 
 
+public import camera;
+
 class Game {
 	RenderWindow window;
 	bool isRunning;
@@ -87,20 +89,4 @@ class Wall {
 
 class Exit {
 	Point position;
-}
-
-class Camera {
-	Vector2f center = Vector2f(0, 0);
-	Vector2f focus = Vector2f(0, 0);
-	float speed = 1;
-	
-	void reset(const Vector2f newFocus = Vector2f(0, 0)) pure nothrow @safe {
-		center = focus = newFocus;
-	}
-	
-	void update(const float delta) pure nothrow @safe {
-		auto offset = center - focus;
-		auto vel = offset * speed * delta * -1;
-		center += vel;
-	}
 }
