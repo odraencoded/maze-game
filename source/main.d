@@ -8,6 +8,7 @@ import dsfml.graphics;
 import game;
 import course;
 import geometry;
+import utility;
 
 alias slash = dirSeparator;
 
@@ -62,6 +63,12 @@ void main(string[] args) {
 	input[GO_LEFT_KEY] = OnOffState.Off;
 	input[GRAB_KEY] = OnOffState.Off;
 	
+	Point[int] directionalKeys;
+	directionalKeys[GO_UP_KEY   ] = Point( 0, -1);
+	directionalKeys[GO_RIGHT_KEY] = Point( 1,  0);
+	directionalKeys[GO_DOWN_KEY ] = Point( 0,  1);
+	directionalKeys[GO_LEFT_KEY ] = Point(-1,  0);
+	
 	// Setup sprites
 	VertexArray[int] playerSprites = setupPlayerSprites();
 	
@@ -111,7 +118,7 @@ void main(string[] args) {
 		bool grabItem, releaseItem;
 		if(SWITCH_GRIP) {
 			// Press once = on, press again = off
-			if(input[GRAB_KEY] == OnOffState.TurnedOn) {
+			if(input[GRAB_KEY].hasFlag(OnOffState.TurnedOn)) {
 				if(player.isGrabbing)
 					releaseItem = true;
 				else
@@ -119,7 +126,7 @@ void main(string[] args) {
 			}
 		} else {
 			// Hold key = on, release key = off
-			if(input[GRAB_KEY] & OnOffState.On)
+			if(input[GRAB_KEY].hasFlag(OnOffState.On))
 				grabItem = true;
 			else
 				releaseItem = true;
@@ -137,15 +144,11 @@ void main(string[] args) {
 		}
 		
 		// Move player
+		enum keyFlag = OnOffState.TurnedOn;
 		Point movement;
-		if(input[GO_UP_KEY] == OnOffState.TurnedOn)
-			movement.y -= 1;
-		if(input[GO_DOWN_KEY] == OnOffState.TurnedOn)
-			movement.y += 1;
-		if(input[GO_LEFT_KEY] == OnOffState.TurnedOn)
-			movement.x -= 1;
-		if(input[GO_RIGHT_KEY] == OnOffState.TurnedOn)
-			movement.x += 1;
+		foreach(int key, Point offset; directionalKeys)
+			if(input[key].hasFlag(keyFlag))
+				movement += offset;
 		
 		bool playerMoved = movePlayer(game, movement);
 		
