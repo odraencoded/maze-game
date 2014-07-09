@@ -92,9 +92,19 @@ class Camera {
 	Vector2f center = Vector2f(0, 0);
 	Vector2f focus = Vector2f(0, 0);
 	Vector2f offset = Vector2f(0, 0);
+	
+	float speed = 1;
 	Vector2f target() const @property { return focus + offset; }
 	
-	void update(float delta) {
-		center = target;
+	void moveFocus(const Vector2f newFocus) {
+		offset += focus - newFocus;
+		focus = newFocus;
+	}
+	
+	void update(const float delta) {
+		//auto vel = -normalize(offset) * speed * delta;
+		auto vel = offset * speed * delta * -1;
+		offset += vel;
+		center += vel;
 	}
 }

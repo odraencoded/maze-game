@@ -28,6 +28,7 @@ enum BACKGROUND_COLOR = Color(64, 64, 64, 255);
 
 enum SWITCH_GRIP = false;
 enum AUTO_RELEASE = false;
+enum CAMERA_SPEED = 8;
 
 enum TEST_PATH = "resources" ~ slash ~ "test";
 enum TEST_COURSE_PATH = TEST_PATH ~ slash  ~ "course";
@@ -38,6 +39,7 @@ void main(string[] args) {
 	// Open Window
 	auto window = game.window = setupWindow();
 	auto camera = new Camera();
+	camera.speed = CAMERA_SPEED;
 	auto cameraView = new View();
 	cameraView.reset(FloatRect(0, 0, GAME_WIDTH, GAME_HEIGHT));
 	
@@ -163,7 +165,7 @@ void main(string[] args) {
 		}
 		
 		// Update camera
-		camera.focus = Vector2f(player.position.x, player.position.y);
+		camera.moveFocus(player.position.to!Vector2f);
 		camera.update(frameDelta);
 		
 		// Draw stuff
@@ -172,6 +174,7 @@ void main(string[] args) {
 		// Set camera
 		enum centeringOffset = Vector2f(.5f, .5f);
 		cameraView.center = (camera.center + centeringOffset) * BLOCK_SIZE;
+		cameraView.center = cameraView.center.round;
 		window.view = cameraView;
 		
 		// Draw exits
