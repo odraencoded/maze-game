@@ -92,20 +92,15 @@ class Exit {
 class Camera {
 	Vector2f center = Vector2f(0, 0);
 	Vector2f focus = Vector2f(0, 0);
-	Vector2f offset = Vector2f(0, 0);
-	
 	float speed = 1;
-	Vector2f target() const @property { return focus + offset; }
 	
-	void moveFocus(const Vector2f newFocus) {
-		offset += focus - newFocus;
-		focus = newFocus;
+	void reset(const Vector2f newFocus = Vector2f(0, 0)) pure nothrow @safe {
+		center = focus = newFocus;
 	}
 	
-	void update(const float delta) {
-		//auto vel = -normalize(offset) * speed * delta;
+	void update(const float delta) pure nothrow @safe {
+		auto offset = center - focus;
 		auto vel = offset * speed * delta * -1;
-		offset += vel;
 		center += vel;
 	}
 }
