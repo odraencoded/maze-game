@@ -15,8 +15,9 @@ class Game {
 }
 
 enum OnOffState {
-	Off = 0, On = 1,
-	Changed = 2,
+	Off = 1,
+	On = 2,
+	Changed = 4,
 	
 	TurnedOff = Changed | Off,
 	TurnedOn = Changed | On

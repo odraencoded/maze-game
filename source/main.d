@@ -63,11 +63,17 @@ void main(string[] args) {
 	input[GO_LEFT_KEY] = OnOffState.Off;
 	input[GRAB_KEY] = OnOffState.Off;
 	
-	Point[int] directionalKeys;
-	directionalKeys[GO_UP_KEY   ] = Point( 0, -1);
-	directionalKeys[GO_RIGHT_KEY] = Point( 1,  0);
-	directionalKeys[GO_DOWN_KEY ] = Point( 0,  1);
-	directionalKeys[GO_LEFT_KEY ] = Point(-1,  0);
+	Side[Keyboard.Key] directionalKeys;
+	directionalKeys[GO_UP_KEY   ] = Side.Up;
+	directionalKeys[GO_RIGHT_KEY] = Side.Right;
+	directionalKeys[GO_DOWN_KEY ] = Side.Down;
+	directionalKeys[GO_LEFT_KEY ] = Side.Left;
+	
+	Side[OnOffState] directionalInput;
+	directionalInput[OnOffState.Off      ] = Side.None;
+	directionalInput[OnOffState.On       ] = Side.None;
+	directionalInput[OnOffState.TurnedOff] = Side.None;
+	directionalInput[OnOffState.TurnedOn ] = Side.None;
 	
 	// Setup sprites
 	VertexArray[int] playerSprites = setupPlayerSprites();
@@ -79,9 +85,8 @@ void main(string[] args) {
 		enum frameDelta = 1.0 / GAME_FRAMERATE;
 		
 		// Updating input register
-		foreach(int key, OnOffState value; input) {
-			input[key] = value & ~OnOffState.Changed;
-		}
+		foreach(int key, ref OnOffState value; input)
+			value &= ~OnOffState.Changed;
 		
 		// Polling events
 		Event event;
@@ -114,6 +119,15 @@ void main(string[] args) {
 		if(!game.isRunning)
 			break;
 		
+		// Updating directional input
+		foreach(OnOffState keyFlag, ref Side sideInput; directionalInput) {
+			sideInput = Side.None;
+			foreach(Keyboard.Key sideKey, Side sideValue; directionalKeys) {
+				if(input[sideKey].hasFlag(keyFlag))
+					sideInput |= sideValue;
+			}
+		}
+		
 		// Grab walls
 		bool grabItem, releaseItem;
 		if(SWITCH_GRIP) {
@@ -143,13 +157,9 @@ void main(string[] args) {
 			}
 		}
 		
-		// Move player
-		enum keyFlag = OnOffState.TurnedOn;
+		// Getting player movement
 		Point movement;
-		foreach(int key, Point offset; directionalKeys)
-			if(input[key].hasFlag(keyFlag))
-				movement += offset;
-		
+		movement = directionalInput[OnOffState.TurnedOn].getOffset();
 		bool playerMoved = movePlayer(game, movement);
 		
 		if(playerMoved) {
