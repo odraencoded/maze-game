@@ -102,6 +102,12 @@ void main(string[] args) {
 					window.close();
 					break;
 				
+				// Resize view
+				case(event.EventType.Resized):
+					auto size = event.size;
+					cameraView.size = Vector2f(size.width, event.size.height);
+					break;
+				
 				// Register input
 				case(event.EventType.KeyPressed):
 					auto code = event.key.code;
