@@ -23,13 +23,16 @@ enum GO_RIGHT_KEY = Keyboard.Key.L;
 enum GO_DOWN_KEY = Keyboard.Key.K;
 enum GO_LEFT_KEY = Keyboard.Key.J;
 enum GRAB_KEY = Keyboard.Key.D;
+enum CAMERA_KEY = Keyboard.Key.W;
 
 enum BLOCK_SIZE = 16;
 enum BACKGROUND_COLOR = Color(64, 64, 64, 255);
 
 enum SWITCH_GRIP = false;
 enum AUTO_RELEASE = false;
-enum CAMERA_SPEED = 8;
+
+enum CAMERA_SPEED = 8; // X BLOCK_SIZE per BLOCK_SIZE of distance per second
+enum CAMERA_CONTROL_FACTOR = 2; // X times as much as above
 
 enum TEST_PATH = "resources" ~ slash ~ "test";
 enum TEST_COURSE_PATH = TEST_PATH ~ slash  ~ "course";
@@ -62,6 +65,7 @@ void main(string[] args) {
 	input[GO_DOWN_KEY] = OnOffState.Off;
 	input[GO_LEFT_KEY] = OnOffState.Off;
 	input[GRAB_KEY] = OnOffState.Off;
+	input[CAMERA_KEY] = OnOffState.Off;
 	
 	Side[Keyboard.Key] directionalKeys;
 	directionalKeys[GO_UP_KEY   ] = Side.Up;
@@ -157,10 +161,15 @@ void main(string[] args) {
 			}
 		}
 		
-		// Getting player movement
-		Point movement;
-		movement = directionalInput[OnOffState.TurnedOn].getOffset();
-		bool playerMoved = movePlayer(game, movement);
+		// Whether to move the player or the camera
+		bool cameraMode = input[CAMERA_KEY].hasFlag(OnOffState.On);
+		
+		bool playerMoved = false;
+		if(!cameraMode) {
+			// Getting player movement
+			Point movement = directionalInput[OnOffState.TurnedOn].getOffset();
+			playerMoved = movePlayer(game, movement);
+		}
 		
 		if(playerMoved) {
 			if(stage.isOnExit(player.position)) {
@@ -178,7 +187,13 @@ void main(string[] args) {
 		}
 		
 		// Update camera
-		camera.moveFocus(player.position.to!Vector2f);
+		if(cameraMode) {
+			// Getting camera movement
+			Point movement = directionalInput[OnOffState.On].getOffset();
+			camera.moveFocus(camera.center + movement * CAMERA_CONTROL_FACTOR);
+		} else {
+			camera.moveFocus(player.position.to!Vector2f);
+		}
 		camera.update(frameDelta);
 		
 		// Draw stuff
