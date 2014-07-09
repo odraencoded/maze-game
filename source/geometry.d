@@ -3,6 +3,26 @@ import dsfml.system.vector2;
 
 alias Point = Vector2!int;
 
+import utility;
+
+// Vector utilities
+U length(T : Vector2!U, U)(const T vector) {
+	return (vector.x.abs.sqrt + vector.y.abs.sqrt).pow(2);
+}
+
+T normalize(T : Vector2!U, U)(const T vector) {
+	auto l = length(vector);
+	return l > 0 ? vector / l : T(0, 0);
+}
+
+vT to(vT : Vector2!T, T, vU: Vector2!U, U)(const vU vector) {
+	return vT(vector.x, vector.y);
+}
+
+T round(T: Vector2!U, U)(const T vector) {
+	return T(vector.x.nearbyint, vector.y.nearbyint);
+}
+
 /**
  * Returns a Side value equivalent to the offset.
  * The offset X goes from Left to Right, Y from Top to Bottom
@@ -45,10 +65,12 @@ enum Side : ubyte {
  * This follows the same coordinate system as getDirection,
  * So that side == getDirection(getOffset(side))
  *
- * Using a Side with multiple bits set is an error. 
  */
 Point getOffset(Side side) {
-	return offsetTable[side];
+	Point offset;
+	foreach(int flag; side.getFlags())
+		offset += offsetTable[flag];
+	return offset;
 }
 
 /**
@@ -79,7 +101,7 @@ public immutable Side[] CrossSides = [
 	Side.Top, Side.Right, Side.Bottom, Side.Left
 ];
 private immutable Side[Point] directionTable;
-private immutable Point[Side] offsetTable;
+private immutable Point[int] offsetTable;
 
 static this() {
 	// Initialize direction table

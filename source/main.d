@@ -8,6 +8,7 @@ import dsfml.graphics;
 import game;
 import course;
 import geometry;
+import utility;
 
 alias slash = dirSeparator;
 
@@ -22,12 +23,16 @@ enum GO_RIGHT_KEY = Keyboard.Key.L;
 enum GO_DOWN_KEY = Keyboard.Key.K;
 enum GO_LEFT_KEY = Keyboard.Key.J;
 enum GRAB_KEY = Keyboard.Key.D;
+enum CAMERA_KEY = Keyboard.Key.W;
 
 enum BLOCK_SIZE = 16;
 enum BACKGROUND_COLOR = Color(64, 64, 64, 255);
 
 enum SWITCH_GRIP = false;
 enum AUTO_RELEASE = false;
+
+enum CAMERA_SPEED = 8; // X BLOCK_SIZE per BLOCK_SIZE of distance per second
+enum CAMERA_CONTROL_FACTOR = 2; // X times as much as above
 
 enum TEST_PATH = "resources" ~ slash ~ "test";
 enum TEST_COURSE_PATH = TEST_PATH ~ slash  ~ "course";
@@ -37,6 +42,10 @@ void main(string[] args) {
 	
 	// Open Window
 	auto window = game.window = setupWindow();
+	auto camera = new Camera();
+	camera.speed = CAMERA_SPEED;
+	auto cameraView = new View();
+	cameraView.reset(FloatRect(0, 0, GAME_WIDTH, GAME_HEIGHT));
 	
 	// Setup game course
 	// If a directory wasn't passed in the arguments, load the test course
@@ -48,6 +57,7 @@ void main(string[] args) {
 	auto stage = game.stage = game.course.buildStage(game.progress);
 	auto player = stage.player;
 	setTitleFromStage(game.window, stage);
+	camera.reset(player.position.to!Vector2f);
 	
 	// Setup input
 	OnOffState[int] input;
@@ -56,6 +66,19 @@ void main(string[] args) {
 	input[GO_DOWN_KEY] = OnOffState.Off;
 	input[GO_LEFT_KEY] = OnOffState.Off;
 	input[GRAB_KEY] = OnOffState.Off;
+	input[CAMERA_KEY] = OnOffState.Off;
+	
+	Side[Keyboard.Key] directionalKeys;
+	directionalKeys[GO_UP_KEY   ] = Side.Up;
+	directionalKeys[GO_RIGHT_KEY] = Side.Right;
+	directionalKeys[GO_DOWN_KEY ] = Side.Down;
+	directionalKeys[GO_LEFT_KEY ] = Side.Left;
+	
+	Side[OnOffState] directionalInput;
+	directionalInput[OnOffState.Off      ] = Side.None;
+	directionalInput[OnOffState.On       ] = Side.None;
+	directionalInput[OnOffState.TurnedOff] = Side.None;
+	directionalInput[OnOffState.TurnedOn ] = Side.None;
 	
 	// Setup sprites
 	VertexArray[int] playerSprites = setupPlayerSprites();
@@ -67,9 +90,8 @@ void main(string[] args) {
 		enum frameDelta = 1.0 / GAME_FRAMERATE;
 		
 		// Updating input register
-		foreach(int key, OnOffState value; input) {
-			input[key] = value & ~OnOffState.Changed;
-		}
+		foreach(int key, ref OnOffState value; input)
+			value &= ~OnOffState.Changed;
 		
 		// Polling events
 		Event event;
@@ -102,11 +124,20 @@ void main(string[] args) {
 		if(!game.isRunning)
 			break;
 		
+		// Updating directional input
+		foreach(OnOffState keyFlag, ref Side sideInput; directionalInput) {
+			sideInput = Side.None;
+			foreach(Keyboard.Key sideKey, Side sideValue; directionalKeys) {
+				if(input[sideKey].hasFlag(keyFlag))
+					sideInput |= sideValue;
+			}
+		}
+		
 		// Grab walls
 		bool grabItem, releaseItem;
 		if(SWITCH_GRIP) {
 			// Press once = on, press again = off
-			if(input[GRAB_KEY] == OnOffState.TurnedOn) {
+			if(input[GRAB_KEY].hasFlag(OnOffState.TurnedOn)) {
 				if(player.isGrabbing)
 					releaseItem = true;
 				else
@@ -114,7 +145,7 @@ void main(string[] args) {
 			}
 		} else {
 			// Hold key = on, release key = off
-			if(input[GRAB_KEY] & OnOffState.On)
+			if(input[GRAB_KEY].hasFlag(OnOffState.On))
 				grabItem = true;
 			else
 				releaseItem = true;
@@ -131,18 +162,15 @@ void main(string[] args) {
 			}
 		}
 		
-		// Move player
-		Point movement;
-		if(input[GO_UP_KEY] == OnOffState.TurnedOn)
-			movement.y -= 1;
-		if(input[GO_DOWN_KEY] == OnOffState.TurnedOn)
-			movement.y += 1;
-		if(input[GO_LEFT_KEY] == OnOffState.TurnedOn)
-			movement.x -= 1;
-		if(input[GO_RIGHT_KEY] == OnOffState.TurnedOn)
-			movement.x += 1;
+		// Whether to move the player or the camera
+		bool cameraMode = input[CAMERA_KEY].hasFlag(OnOffState.On);
 		
-		bool playerMoved = movePlayer(game, movement);
+		bool playerMoved = false;
+		if(!cameraMode) {
+			// Getting player movement
+			Point movement = directionalInput[OnOffState.TurnedOn].getOffset();
+			playerMoved = movePlayer(game, movement);
+		}
 		
 		if(playerMoved) {
 			if(stage.isOnExit(player.position)) {
@@ -152,6 +180,7 @@ void main(string[] args) {
 					stage = game.stage = game.course.buildStage(game.progress);
 					player = stage.player;
 					setTitleFromStage(game.window, stage);
+					camera.reset(player.position.to!Vector2f);
 				} else {
 					// TODO: anything else!
 					return;
@@ -159,8 +188,24 @@ void main(string[] args) {
 			}
 		}
 		
+		// Update camera
+		if(cameraMode) {
+			// Getting camera movement
+			Point movement = directionalInput[OnOffState.On].getOffset();
+			camera.focus = camera.center + movement * CAMERA_CONTROL_FACTOR;
+		} else {
+			camera.focus = player.position.to!Vector2f;
+		}
+		camera.update(frameDelta);
+		
 		// Draw stuff
 		window.clear(BACKGROUND_COLOR);
+		
+		// Set camera
+		enum centeringOffset = Vector2f(.5f, .5f);
+		cameraView.center = (camera.center + centeringOffset) * BLOCK_SIZE;
+		cameraView.center = cameraView.center.round;
+		window.view = cameraView;
 		
 		// Draw exits
 		foreach(Exit exit; stage.exits) {
