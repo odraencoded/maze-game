@@ -1,5 +1,3 @@
-module camera;
-
 import dsfml.system.vector2;
 
 /**

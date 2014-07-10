@@ -1,5 +1,3 @@
-module scaling;
-
 import std.algorithm;
 import std.math;
 import std.stdio;

@@ -7,6 +7,7 @@ import core.memory;
 import dsfml.graphics;
 
 import game;
+import view;
 import course;
 import geometry;
 import utility;

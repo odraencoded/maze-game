@@ -5,8 +5,7 @@ import dsfml.graphics;
 import geometry;
 import course; 
 
-public import camera;
-public import scaling;
+import view;
 
 class Game {
 	RenderWindow window;
