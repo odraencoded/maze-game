@@ -15,6 +15,7 @@ enum ERROR_BUFFER_CREATION_MESSAGE = "Couldn't create rendering buffer";
  */
 class VideoResizer : Drawable {
 	Game game;
+	ScalingMode scalingMode;
 	
 	this(Game game) {
 		this.game = game;
@@ -44,23 +45,32 @@ class VideoResizer : Drawable {
 			// buffer width should be 522
 			// window.view.size.x should be 521
 			
-			// Get the smallest scale between the two sides, such that
-			// neither dimension of game.size * scale is greater than
-			// window.size
+			// Calculate the scale and the view size
 			Vector2f scale;
-			scale.x = windowSize.x / cast(float)game.size.x;
-			scale.y = windowSize.y / cast(float)game.size.y;
-			float smallestScale = min(scale.x, scale.y);
-			
-			// Get magnification, update buffer sprite scale
-			auto magnification = cast(float)floor(smallestScale);
-			_bufferSprite.scale = Vector2f(magnification, magnification);
-			
-			// Calculate game view size
 			Vector2u viewSize;
-			viewSize.x = cast(uint)ceil(windowSize.x / magnification);
-			viewSize.y = cast(uint)ceil(windowSize.y / magnification);
 			
+			final switch(scalingMode) {
+			case ScalingMode.None:
+				viewSize = windowSize;
+				scale = Vector2f(1, 1);
+				break;
+			case ScalingMode.PixelPerfect:
+				// Get the smallest factor between the two sides, such that
+				// neither dimension of game.size * factor is greater than
+				// window.size
+				Vector2f factor;
+				factor.x = windowSize.x / cast(float)game.size.x;
+				factor.y = windowSize.y / cast(float)game.size.y;
+				float smallestFactor = min(factor.x, factor.y);
+				float roundedFactor = cast(float)floor(smallestFactor);
+				scale = Vector2f(roundedFactor, roundedFactor);
+				
+				viewSize.x = cast(uint)ceil(windowSize.x / scale.x);
+				viewSize.y = cast(uint)ceil(windowSize.y / scale.y);
+				break;
+			}
+			
+			_bufferSprite.scale = scale;
 			game.view.size = viewSize.to!Vector2f;
 			
 			// Create a new buffer for the game
@@ -85,4 +95,12 @@ class VideoResizer : Drawable {
 	private {
 		Sprite _bufferSprite;
 	}
+}
+
+/++
+ + Methods to scale the view.
+ +/
+enum ScalingMode {
+	None, // Never scale
+	PixelPerfect, // Scale by integer values
 }

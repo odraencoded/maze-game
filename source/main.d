@@ -38,11 +38,14 @@ enum CAMERA_CONTROL_FACTOR = 2; // X times as much as above
 enum TEST_PATH = "resources" ~ slash ~ "test";
 enum TEST_COURSE_PATH = TEST_PATH ~ slash  ~ "course";
 
+enum DEFAULT_SCALING_MODE = ScalingMode.PixelPerfect;
+
 void main(string[] args) {
 	Game game = new Game(GAME_WIDTH, GAME_HEIGHT);
 	
 	// Open Window
 	auto window = game.window = setupWindow();
+	game.resizer.scalingMode = DEFAULT_SCALING_MODE;
 	game.resizer.checkSize();
 	
 	// Setup view
