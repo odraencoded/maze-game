@@ -1,11 +1,13 @@
 import std.stdio;
 import std.algorithm;
+import std.math;
 import std.path;
 import core.memory;
 
 import dsfml.graphics;
 
 import game;
+import view;
 import course;
 import geometry;
 import utility;
@@ -37,15 +39,21 @@ enum CAMERA_CONTROL_FACTOR = 2; // X times as much as above
 enum TEST_PATH = "resources" ~ slash ~ "test";
 enum TEST_COURSE_PATH = TEST_PATH ~ slash  ~ "course";
 
+enum DEFAULT_SCALING_MODE = ScalingMode.PixelPerfect;
+
 void main(string[] args) {
-	Game game = new Game();
+	Game game = new Game(GAME_WIDTH, GAME_HEIGHT);
 	
 	// Open Window
 	auto window = game.window = setupWindow();
+	game.resizer.scalingMode = DEFAULT_SCALING_MODE;
+	game.resizer.checkSize();
+	
+	// Setup view
 	auto camera = new Camera();
 	camera.speed = CAMERA_SPEED;
-	auto cameraView = new View();
-	cameraView.reset(FloatRect(0, 0, GAME_WIDTH, GAME_HEIGHT));
+	
+	auto cameraView = game.view;
 	
 	// Setup game course
 	// If a directory wasn't passed in the arguments, load the test course
@@ -100,6 +108,11 @@ void main(string[] args) {
 				// Close window
 				case(event.EventType.Closed):
 					window.close();
+					break;
+				
+				// Resize view
+				case(event.EventType.Resized):
+					game.resizer.checkSize();
 					break;
 				
 				// Register input
@@ -199,17 +212,18 @@ void main(string[] args) {
 		camera.update(frameDelta);
 		
 		// Draw stuff
-		window.clear(BACKGROUND_COLOR);
+		RenderTarget renderTarget = game.buffer;
+		renderTarget.clear(BACKGROUND_COLOR);
 		
 		// Set camera
 		enum centeringOffset = Vector2f(.5f, .5f);
 		cameraView.center = (camera.center + centeringOffset) * BLOCK_SIZE;
 		cameraView.center = cameraView.center.round;
-		window.view = cameraView;
+		renderTarget.view = cameraView;
 		
 		// Draw exits
 		foreach(Exit exit; stage.exits) {
-			renderExit(exit, window);
+			renderExit(exit, renderTarget);
 		}
 		
 		// Draw player
@@ -221,14 +235,16 @@ void main(string[] args) {
 		
 		auto playerSprite = playerSprites[player.facing];
 		
-		window.draw(playerSprite, state);
+		renderTarget.draw(playerSprite, state);
 		
 		// Draw walls
 		foreach(Wall wall; stage.walls) {
-			renderWall(wall, window);
+			renderWall(wall, renderTarget);
 		}
 		
+		game.buffer.display();
 		
+		window.draw(game.resizer);
 		window.display();
 		
 		// Cleaning up the trash
