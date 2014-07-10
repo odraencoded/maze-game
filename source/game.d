@@ -6,14 +6,28 @@ import geometry;
 import course; 
 
 public import camera;
+public import scaling;
 
 class Game {
 	RenderWindow window;
 	bool isRunning;
 	
+	RenderTexture buffer;
+	View view;
+	immutable Vector2u size;
+	
+	VideoResizer resizer;
+	
 	Course course;
 	Stage stage;
 	int progress;
+	
+	this(uint width, uint height) {
+		size = Vector2u(width, height);
+		view = new View();
+		
+		resizer = new VideoResizer(this);
+	}
 }
 
 enum OnOffState {
