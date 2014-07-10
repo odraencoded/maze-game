@@ -121,18 +121,25 @@ class BitmapStageLoader : StageGenerator {
 	string getTitle() const { return title; }
 	
 	Stage buildStage() const {
-		return LoadStage(path);
+		return loadBitmapStage(path);
 	}
 }
 
 /**
  * Parses a bitmap file into a stage.
  */
-public Stage LoadStage(string path) {
+public Stage loadBitmapStage(in string path) {
+	enum BITMAP_STAGE_OPEN_ERROR_MESSAGE = "Couldn't open bitmap stage file";
+	
+	// Load stage bitmap from file
 	Image bitmap = new Image();
 	if(!bitmap.loadFromFile(path))
-		throw new Exception(null);
+		throw new Exception(BITMAP_STAGE_OPEN_ERROR_MESSAGE);
 	
+	return loadBitmapStage(bitmap);
+}
+
+public Stage loadBitmapStage(scope Image bitmap) {
 	auto size = bitmap.getSize();
 	Box bitmapFrame = {0, 0, size.x, size.y};
 	Box stageFrame = {0, 0, (size.x + 1) / 2, (size.y + 1) / 2};
