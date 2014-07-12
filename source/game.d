@@ -7,6 +7,12 @@ import course;
 
 import view;
 
+enum GAME_WIDTH = 320;
+enum GAME_HEIGHT = 180;
+enum GAME_FRAMERATE = 30;
+enum GAME_TITLE = "Maze Game";
+enum GAME_TITLE_SEPARATOR = " - ";
+
 class Game {
 	RenderWindow window;
 	bool isRunning;
@@ -35,7 +41,7 @@ class Stage {
 	Wall[] walls;
 	Exit[] exits;
 	
-	bool isOnExit(Point point) {
+	bool isOnExit(Point point) pure {
 		foreach(Exit exit; exits) {
 			if(exit.position == point)
 				return true;
@@ -43,7 +49,7 @@ class Stage {
 		return false;
 	}
 	
-	bool canGo(Point position, Side direction, bool skippedGrabbed) {
+	bool canGo(Point position, Side direction, bool skippedGrabbed) pure {
 		position += getOffset(direction);
 		
 		foreach(Wall wall; walls) {
@@ -55,7 +61,7 @@ class Stage {
 		return true;
 	}
 	
-	Wall getItem(Point position, Side direction) {
+	Wall getItem(Point position, Side direction) pure {
 		position += getOffset(direction);
 		
 		foreach(Wall wall; walls) {
@@ -71,14 +77,16 @@ class Pusher {
 	Side facing = Side.Down;
 	
 	Wall grabbedItem;
-	bool isGrabbing() const { return !(grabbedItem is null); }
+	bool isGrabbing() const pure nothrow @safe {
+		return !(grabbedItem is null);
+	}
 	
-	void grabItem(Wall item) {
+	void grabItem(Wall item) pure {
 		item.isGrabbed = true;
 		grabbedItem = item;
 	}
 	
-	void releaseItem() {
+	void releaseItem() pure {
 		grabbedItem.isGrabbed = false;
 		grabbedItem = null;
 	}

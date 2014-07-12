@@ -34,7 +34,7 @@ T round(T: Vector2!U, U)(const T vector) {
  * The offset X goes from Left to Right, Y from Top to Bottom
  * If both are axes are non-zero a diagonal such as TopRight is returned.
  */
-Side getDirection(Point offset) {
+Side getDirection(scope Point offset) pure {
 	if(offset.x) offset.x /= abs(offset.x);
 	if(offset.y) offset.y /= abs(offset.y);
 	return DIRECTION_TABLE[offset];
@@ -72,7 +72,7 @@ enum Side : ubyte {
  * So that side == getDirection(getOffset(side))
  *
  */
-Point getOffset(Side side) pure @safe {
+Point getOffset(in Side side) pure @safe {
 	Point offset;
 	foreach(int flag; side.getFlags())
 		offset += OFFSET_TABLE[flag];
@@ -83,7 +83,7 @@ Point getOffset(Side side) pure @safe {
  * Returns a value which is the opposite Side of the input.
  * e.g getOpposite(Side.Right) == Side.Left
  */
-Side getOpposite(Side side) {
+Side getOpposite(in Side side) pure {
 	return cast(Side)(side << 4 | side >> 4);
 }
 
