@@ -65,7 +65,7 @@ void main(string[] args) {
 	auto stage = game.stage = game.course.buildStage(game.progress);
 	auto player = stage.player;
 	setTitleFromStage(game.window, stage);
-	camera.reset(player.position.to!Vector2f);
+	camera.reset(player.position.toVector2f);
 	
 	// Setup input
 	OnOffState[int] input;
@@ -193,7 +193,7 @@ void main(string[] args) {
 					stage = game.stage = game.course.buildStage(game.progress);
 					player = stage.player;
 					setTitleFromStage(game.window, stage);
-					camera.reset(player.position.to!Vector2f);
+					camera.reset(player.position.toVector2f);
 				} else {
 					// TODO: anything else!
 					return;
@@ -207,7 +207,7 @@ void main(string[] args) {
 			Point movement = directionalInput[OnOffState.On].getOffset();
 			camera.focus = camera.center + movement * CAMERA_CONTROL_FACTOR;
 		} else {
-			camera.focus = player.position.to!Vector2f;
+			camera.focus = player.position.toVector2f;
 		}
 		camera.update(frameDelta);
 		

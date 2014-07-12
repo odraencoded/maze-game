@@ -1,9 +1,11 @@
+import std.conv;
 import std.math;
+
 import dsfml.system.vector2;
 
-alias Point = Vector2!int;
-
 import utility;
+
+alias Point = Vector2!int;
 
 // Vector utilities
 U length(T : Vector2!U, U)(const T vector) {
@@ -15,8 +17,12 @@ T normalize(T : Vector2!U, U)(const T vector) {
 	return l > 0 ? vector / l : T(0, 0);
 }
 
-vT to(vT : Vector2!T, T, vU: Vector2!U, U)(const vU vector) {
-	return vT(vector.x, vector.y);
+Vector2!TTo toVector(TFrom, TTo)(in Vector2!TFrom vector) {
+	return Vector2!TTo(vector.x.to!TTo(), vector.y.to!TTo());
+}
+
+Vector2f toVector2f(T)(in Vector2!T vector) {
+	return vector.toVector!(T, float)();
 }
 
 T round(T: Vector2!U, U)(const T vector) {
