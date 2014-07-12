@@ -1,9 +1,13 @@
-import std.stdio;
+import std.file;
+import std.json;
+import std.string;
 
 import dsfml.graphics;
 
 import game;
 import geometry;
+import json;
+import utility;
 
 enum PLAYER_COLOR = Color.Green;
 enum EXIT_COLOR = Color.Blue;
@@ -15,6 +19,15 @@ enum FIXED_WALL_COLOR = Color.Red;
  * A course is a collection of stages.
  */
 class Course {
+	struct Info {
+		string title;
+		string[] authors;
+		string url;
+	}
+	
+	Info info;
+	StageGenerator[] stageGens;
+	
 	/**
 	 * The number of stages in this course.
 	 */
@@ -31,8 +44,6 @@ class Course {
 		stage.title = aStageGen.getTitle();
 		return stage;
 	}
-	
-	StageGenerator[] stageGens;
 }
 
 /**
@@ -40,7 +51,6 @@ class Course {
  */
 Course loadCourse(string directory) {
 	// It takes a lot of stuff to read a directory :/
-	import std.file;
 	import std.stdio;
 	import std.regex;
 	import std.path;
@@ -64,6 +74,9 @@ Course loadCourse(string directory) {
 	}
 	StageFileEntry[] stageFiles;
 	
+	enum COURSE_INFO_FILENAME = "course";
+	string courseInfoPath = null;
+	
 	foreach(string path; dirEntries(directory, SpanMode.shallow))
 	{
 		auto filename = baseName(stripExtension(path));
@@ -86,6 +99,9 @@ Course loadCourse(string directory) {
 					break;
 			}
 			stageFiles.insertInPlace(i, newEntry);
+		} else if(filename.cmp(COURSE_INFO_FILENAME) == 0) {
+			// Set path to file containing data about the course
+			courseInfoPath = path;
 		}
 	}
 	
@@ -94,6 +110,9 @@ Course loadCourse(string directory) {
 	foreach(StageFileEntry entry; stageFiles) {
 		result.stageGens ~= new BitmapStageLoader(entry.path, entry.title);
 	}
+	
+	if(!(courseInfoPath is null))
+		result.info = loadCourseInfo(courseInfoPath);
 	
 	return result;
 }
@@ -233,6 +252,21 @@ auto GetNeighbourPixels(uint x, uint y, Image bitmap, Box bitmapFrame) {
 			   }
 			}
 		}
+	}
+	
+	return result;
+}
+
+Course.Info loadCourseInfo(in string path) {
+	Course.Info result;
+	
+	auto json = parseJSON(readText(path));
+	JSONValue[string] root;
+	
+	if(json.getJsonValue(root)) {
+		root.getJsonValue("title", result.title);
+		root.getJsonValues("authors", result.authors);
+		root.getJsonValue("url", result.url);
 	}
 	
 	return result;
