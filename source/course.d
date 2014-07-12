@@ -49,7 +49,7 @@ class Course {
 /**
  * Loads a course from a directory
  */
-Course loadCourse(string directory) {
+Course loadCourse(in string directory) {
 	// It takes a lot of stuff to read a directory :/
 	import std.stdio;
 	import std.regex;
@@ -113,6 +113,23 @@ Course loadCourse(string directory) {
 	
 	if(!(courseInfoPath is null))
 		result.info = loadCourseInfo(courseInfoPath);
+	
+	return result;
+}
+
+/**
+ * Attempts to load a directory subdirectories as courses.
+ */
+Course[] loadCourses(in string directory) {
+	string[] subdirs;
+	foreach(DirEntry anEntry; dirEntries(directory, SpanMode.shallow)) {
+		if(anEntry.isDir)
+			subdirs ~= anEntry.name;
+	}
+	
+	Course[] result = new Course[subdirs.length];
+	foreach(int i, string aSubdir; subdirs)
+		result[i] = loadCourse(aSubdir);
 	
 	return result;
 }
