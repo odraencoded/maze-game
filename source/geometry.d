@@ -37,7 +37,7 @@ T round(T: Vector2!U, U)(const T vector) {
 Side getDirection(Point offset) {
 	if(offset.x) offset.x /= abs(offset.x);
 	if(offset.y) offset.y /= abs(offset.y);
-	return directionTable[offset];
+	return DIRECTION_TABLE[offset];
 }
 
 /**
@@ -72,10 +72,10 @@ enum Side : ubyte {
  * So that side == getDirection(getOffset(side))
  *
  */
-Point getOffset(Side side) {
+Point getOffset(Side side) pure @safe {
 	Point offset;
 	foreach(int flag; side.getFlags())
-		offset += offsetTable[flag];
+		offset += OFFSET_TABLE[flag];
 	return offset;
 }
 
@@ -106,22 +106,22 @@ pure struct Box {
 public immutable Side[] CrossSides = [
 	Side.Top, Side.Right, Side.Bottom, Side.Left
 ];
-private immutable Side[Point] directionTable;
-private immutable Point[int] offsetTable;
+private immutable Side[Point] DIRECTION_TABLE;
+private immutable Point[int] OFFSET_TABLE;
 
 static this() {
 	// Initialize direction table
-	directionTable[Point( 0,  0)] = Side.None;
-	directionTable[Point( 0, -1)] = Side.Top;
-	directionTable[Point( 1, -1)] = Side.TopRight;
-	directionTable[Point( 1,  0)] = Side.Right;
-	directionTable[Point( 1,  1)] = Side.BottomRight;
-	directionTable[Point( 0,  1)] = Side.Bottom;
-	directionTable[Point(-1,  1)] = Side.BottomLeft;
-	directionTable[Point(-1,  0)] = Side.Left;
-	directionTable[Point(-1, -1)] = Side.TopLeft;
+	DIRECTION_TABLE[Point( 0,  0)] = Side.None;
+	DIRECTION_TABLE[Point( 0, -1)] = Side.Top;
+	DIRECTION_TABLE[Point( 1, -1)] = Side.TopRight;
+	DIRECTION_TABLE[Point( 1,  0)] = Side.Right;
+	DIRECTION_TABLE[Point( 1,  1)] = Side.BottomRight;
+	DIRECTION_TABLE[Point( 0,  1)] = Side.Bottom;
+	DIRECTION_TABLE[Point(-1,  1)] = Side.BottomLeft;
+	DIRECTION_TABLE[Point(-1,  0)] = Side.Left;
+	DIRECTION_TABLE[Point(-1, -1)] = Side.TopLeft;
 	
-	// Initialize offsetTable, which is the inverse of the directionTable
-	foreach(Point offset, Side side; directionTable)
-		offsetTable[side] = offset;
+	// Initialize OFFSET_TABLE, which is the inverse of the DIRECTION_TABLE
+	foreach(Point offset, Side side; DIRECTION_TABLE)
+		OFFSET_TABLE[side] = offset;
 }

@@ -10,6 +10,7 @@ import game;
 import view;
 import course;
 import geometry;
+import input;
 import utility;
 
 alias slash = dirSeparator;
@@ -68,25 +69,13 @@ void main(string[] args) {
 	camera.reset(player.position.toVector2f);
 	
 	// Setup input
-	OnOffState[int] input;
-	input[GO_UP_KEY] = OnOffState.Off;
-	input[GO_RIGHT_KEY] = OnOffState.Off;
-	input[GO_DOWN_KEY] = OnOffState.Off;
-	input[GO_LEFT_KEY] = OnOffState.Off;
-	input[GRAB_KEY] = OnOffState.Off;
-	input[CAMERA_KEY] = OnOffState.Off;
-	
-	Side[Keyboard.Key] directionalKeys;
-	directionalKeys[GO_UP_KEY   ] = Side.Up;
-	directionalKeys[GO_RIGHT_KEY] = Side.Right;
-	directionalKeys[GO_DOWN_KEY ] = Side.Down;
-	directionalKeys[GO_LEFT_KEY ] = Side.Left;
-	
-	Side[OnOffState] directionalInput;
-	directionalInput[OnOffState.Off      ] = Side.None;
-	directionalInput[OnOffState.On       ] = Side.None;
-	directionalInput[OnOffState.TurnedOff] = Side.None;
-	directionalInput[OnOffState.TurnedOn ] = Side.None;
+	InputState input = new InputState;
+	input.bind(GO_UP_KEY   , Command.GoUp   );
+	input.bind(GO_RIGHT_KEY, Command.GoRight);
+	input.bind(GO_DOWN_KEY , Command.GoDown );
+	input.bind(GO_LEFT_KEY , Command.GoLeft );
+	input.bind(GRAB_KEY    , Command.Grab   );
+	input.bind(CAMERA_KEY  , Command.Camera );
 	
 	// Setup sprites
 	VertexArray[int] playerSprites = setupPlayerSprites();
@@ -97,17 +86,15 @@ void main(string[] args) {
 		// Fixed delta
 		enum frameDelta = 1.0 / GAME_FRAMERATE;
 		
-		// Updating input register
-		foreach(int key, ref OnOffState value; input)
-			value &= ~OnOffState.Changed;
+		// Checking events
+		input.prepareCycle();
 		
-		// Polling events
 		Event event;
 		while(window.pollEvent(event)) {
 			switch(event.type) {
 				// Close window
 				case(event.EventType.Closed):
-					window.close();
+					input.close = true;
 					break;
 				
 				// Resize view
@@ -117,40 +104,33 @@ void main(string[] args) {
 				
 				// Register input
 				case(event.EventType.KeyPressed):
-					auto code = event.key.code;
-					if(code in input)
-						input[code] = OnOffState.TurnedOn;
+					input.pressKey(event.key.code);
 					break;
 				
 				case(event.EventType.KeyReleased):
-					auto code = event.key.code;
-					if(code in input)
-						input[code] = OnOffState.TurnedOff;
+					input.releaseKey(event.key.code);
 					break;
 				
 				default:
 			}
 		}
 		
+		input.finishCycle();
+		
+		if(input.close)
+			window.close();
+		
 		// Exiting loop
 		game.isRunning = game.isRunning && window.isOpen();
 		if(!game.isRunning)
 			break;
 		
-		// Updating directional input
-		foreach(OnOffState keyFlag, ref Side sideInput; directionalInput) {
-			sideInput = Side.None;
-			foreach(Keyboard.Key sideKey, Side sideValue; directionalKeys) {
-				if(input[sideKey].hasFlag(keyFlag))
-					sideInput |= sideValue;
-			}
-		}
 		
 		// Grab walls
 		bool grabItem, releaseItem;
 		if(SWITCH_GRIP) {
 			// Press once = on, press again = off
-			if(input[GRAB_KEY].hasFlag(OnOffState.TurnedOn)) {
+			if(input.wasTurnedOn(Command.Grab)) {
 				if(player.isGrabbing)
 					releaseItem = true;
 				else
@@ -158,7 +138,7 @@ void main(string[] args) {
 			}
 		} else {
 			// Hold key = on, release key = off
-			if(input[GRAB_KEY].hasFlag(OnOffState.On))
+			if(input.isOn(Command.Grab))
 				grabItem = true;
 			else
 				releaseItem = true;
@@ -176,12 +156,12 @@ void main(string[] args) {
 		}
 		
 		// Whether to move the player or the camera
-		bool cameraMode = input[CAMERA_KEY].hasFlag(OnOffState.On);
+		bool cameraMode = input.isOn(Command.Camera);
 		
 		bool playerMoved = false;
 		if(!cameraMode) {
 			// Getting player movement
-			Point movement = directionalInput[OnOffState.TurnedOn].getOffset();
+			Point movement = input.getOffset(OnOffState.TurnedOn);
 			playerMoved = movePlayer(game, movement);
 		}
 		
@@ -204,7 +184,7 @@ void main(string[] args) {
 		// Update camera
 		if(cameraMode) {
 			// Getting camera movement
-			Point movement = directionalInput[OnOffState.On].getOffset();
+			Point movement = input.getOffset(OnOffState.On);
 			camera.focus = camera.center + movement * CAMERA_CONTROL_FACTOR;
 		} else {
 			camera.focus = player.position.toVector2f;

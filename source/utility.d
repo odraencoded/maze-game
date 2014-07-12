@@ -16,3 +16,15 @@ int[] getFlags(T)(const T value) pure nothrow @safe {
 	}
 	return foundFlags;
 }
+
+/++
+ + Represents whether something is on or off.
+ +/
+enum OnOffState {
+	Off = 1,
+	On = 2,
+	Changed = 4,
+	
+	TurnedOff = Changed | Off,
+	TurnedOn = Changed | On
+}

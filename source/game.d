@@ -29,15 +29,6 @@ class Game {
 	}
 }
 
-enum OnOffState {
-	Off = 1,
-	On = 2,
-	Changed = 4,
-	
-	TurnedOff = Changed | Off,
-	TurnedOn = Changed | On
-}
-
 class Stage {
 	string title;
 	Pusher player;
