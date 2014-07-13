@@ -100,14 +100,20 @@ void main(string[] args) {
 		if(!game.isRunning)
 			break;
 		
-		// Draw stuff
+		// Drawing part
 		auto buffer = game.buffer;
 		buffer.clear(BACKGROUND_COLOR);
 		
+		// Update view
+		buffer.view = game.view;
+		
+		// Draw screen
 		buffer.draw(game.currentScreen);
 		
+		// Flip
 		buffer.display();
 		
+		// Not even bothering clearing the window since buffer should cover it
 		window.draw(game.resizer);
 		window.display();
 		
@@ -115,6 +121,9 @@ void main(string[] args) {
 		if(game.nextScreen) {
 			game.currentScreen = game.nextScreen;
 			game.nextScreen = null;
+			
+			// Reset view
+			game.view.reset(FloatRect(Vector2f(0, 0), game.view.size));
 		}
 		
 		// Cleaning up the trash

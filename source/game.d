@@ -32,7 +32,7 @@ class Game {
 	
 	this(uint width, uint height) {
 		size = Vector2u(width, height);
-		view = new View();
+		view = new View(FloatRect(Vector2f(0, 0), size.toVector2f));
 		
 		resizer = new VideoResizer(this);
 	}

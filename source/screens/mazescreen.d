@@ -105,16 +105,15 @@ class MazeScreen : GameScreen {
 			camera.focus = player.position.toVector2f;
 		}
 		camera.update(frameDelta);
+		
+		// Update view
+		enum CENTERING_OFFSET = Vector2f(.5f, .5f);
+		auto cameraView = game.view;
+		cameraView.center = (camera.center + CENTERING_OFFSET) * BLOCK_SIZE;
+		cameraView.center = cameraView.center.round;
 	}
 	
 	override void draw(RenderTarget renderTarget, RenderStates states) {
-		// Set camera
-		enum centeringOffset = Vector2f(.5f, .5f);
-		auto cameraView = game.view;
-		cameraView.center = (camera.center + centeringOffset) * BLOCK_SIZE;
-		cameraView.center = cameraView.center.round;
-		renderTarget.view = cameraView;
-		
 		// Draw exits
 		foreach(Exit exit; stage.exits) {
 			renderExit(exit, renderTarget);
