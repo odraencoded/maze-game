@@ -8,6 +8,7 @@ import gamescreen;
 import geometry;
 import input;
 import menuscreen;
+import stage;
 import utility;
 
 enum BLOCK_SIZE = 16;
@@ -37,7 +38,7 @@ class MazeScreen : GameScreen {
 		
 		stage = game.stage;
 		player = stage.player;
-		game.subtitle = game.stage.title;
+		game.subtitle = stage.metadata.title;
 		camera.reset(player.position.toVector2f);
 	}
 	
@@ -88,7 +89,7 @@ class MazeScreen : GameScreen {
 				if(game.progress < game.course.length) {
 					stage = game.stage = game.course.buildStage(game.progress);
 					player = stage.player;
-					game.subtitle = stage.title;
+					game.subtitle = stage.metadata.title;
 					camera.reset(player.position.toVector2f);
 				} else {
 					game.nextScreen = new MenuScreen(game);

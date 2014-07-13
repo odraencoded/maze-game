@@ -5,6 +5,7 @@ import std.string;
 import dsfml.graphics;
 
 import game;
+import stage;
 import geometry;
 import json;
 import utility;
@@ -19,31 +20,45 @@ enum FIXED_WALL_COLOR = Color.Red;
  * A course is a collection of stages.
  */
 class Course {
-	struct Info {
-		string title;
-		string[] authors;
-		string url;
-	}
+	CourseInfo info;
+	StageEntry[] stages;
 	
-	Info info;
-	StageGenerator[] stageGens;
+	this() {
+		info = new CourseInfo();
+	}
 	
 	/**
 	 * The number of stages in this course.
 	 */
 	int length() const @property {
-		return stageGens.length;
+		return stages.length;
 	}
 	
 	/**
 	 * Creates the selected stage and returns it.
 	 */
 	Stage buildStage(int index) const {
-		auto aStageGen = stageGens[index];
-		auto stage = aStageGen.buildStage();
-		stage.title = aStageGen.getTitle();
+		auto aStageGen = stages[index].generator;
+		auto stage = aStageGen.buildStage(this.stages[index].metadata);
 		return stage;
 	}
+}
+
+/++
+ + Metadata of a Course.
+ +/
+class CourseInfo {
+	string title;
+	string[] authors;
+	string url;
+}
+
+/++
+ + Represents a stage in a course.
+ +/
+class StageEntry {
+	StageGenerator generator;
+	StageInfo metadata;
 }
 
 /**
@@ -107,8 +122,15 @@ Course loadCourse(in string directory) {
 	
 	// Create a generator for each stage
 	Course result = new Course();
-	foreach(StageFileEntry entry; stageFiles) {
-		result.stageGens ~= new BitmapStageLoader(entry.path, entry.title);
+	foreach(StageFileEntry aFileEntry; stageFiles) {
+		auto newStageEntry = new StageEntry();
+		newStageEntry.generator = new BitmapStageLoader(aFileEntry.path);
+		
+		auto newMetadata = new StageInfo();
+		newMetadata.title = aFileEntry.title;
+		newStageEntry.metadata = newMetadata;
+		
+		result.stages ~= newStageEntry;
 	}
 	
 	// Load course info if an info file is found
@@ -144,8 +166,7 @@ Course[] loadCourses(in string directory) {
  * Generates a stage. Duh.
  */
 interface StageGenerator {
-	string getTitle() const;
-	Stage buildStage() const;
+	Stage buildStage(in StageInfo metadata) const;
 }
 
 /**
@@ -153,24 +174,20 @@ interface StageGenerator {
  */
 class BitmapStageLoader : StageGenerator {
 	string path;
-	string title;
 	
-	this(string path, string title = null) {
+	this(string path) {
 		this.path = path;
-		this.title = title;
 	}
 	
-	string getTitle() const { return title; }
-	
-	Stage buildStage() const {
-		return loadBitmapStage(path);
+	Stage buildStage(in StageInfo metadata) const {
+		return loadBitmapStage(path, metadata);
 	}
 }
 
 /**
  * Parses a bitmap file into a stage.
  */
-public Stage loadBitmapStage(in string path) {
+public Stage loadBitmapStage(in string path, in StageInfo metadata) {
 	enum BITMAP_STAGE_OPEN_ERROR_MESSAGE = "Couldn't open bitmap stage file";
 	
 	// Load stage bitmap from file
@@ -178,16 +195,16 @@ public Stage loadBitmapStage(in string path) {
 	if(!bitmap.loadFromFile(path))
 		throw new Exception(BITMAP_STAGE_OPEN_ERROR_MESSAGE);
 	
-	return loadBitmapStage(bitmap);
+	return loadBitmapStage(bitmap, metadata);
 }
 
-public Stage loadBitmapStage(scope Image bitmap) {
+public Stage loadBitmapStage(scope Image bitmap, in StageInfo metadata) {
 	auto size = bitmap.getSize();
 	Box bitmapFrame = {0, 0, size.x, size.y};
 	Box stageFrame = {0, 0, (size.x + 1) / 2, (size.y + 1) / 2};
 	bool[Point] checkedPoints;
 	
-	auto newStage = new Stage();
+	auto newStage = new Stage(metadata);
 	
 	for(uint x=0; x<size.x; x += 2) {
 		for(uint y=0; y<size.y; y += 2) {
@@ -280,8 +297,8 @@ auto GetNeighbourPixels(uint x, uint y, Image bitmap, Box bitmapFrame) {
 	return result;
 }
 
-Course.Info loadCourseInfo(in string path) {
-	Course.Info result;
+CourseInfo loadCourseInfo(in string path) {
+	CourseInfo result = new CourseInfo();
 	
 	auto json = parseJSON(readText(path));
 	JSONValue[string] root;

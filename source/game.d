@@ -1,10 +1,9 @@
-import std.algorithm;
-
 import dsfml.graphics;
 
+import course; 
 import gamescreen;
 import geometry;
-import course; 
+import stage;
 
 import view;
 
@@ -45,43 +44,6 @@ class Game {
 		} else {
 			window.setTitle(title ~ GAME_SUBTITLE_SEPARATOR ~ subtitle);
 		}
-	}
-}
-
-class Stage {
-	string title;
-	Pusher player;
-	Wall[] walls;
-	Exit[] exits;
-	
-	bool isOnExit(Point point) pure {
-		foreach(Exit exit; exits) {
-			if(exit.position == point)
-				return true;
-		}
-		return false;
-	}
-	
-	bool canGo(Point position, Side direction, bool skippedGrabbed) pure {
-		position += getOffset(direction);
-		
-		foreach(Wall wall; walls) {
-			if(!(skippedGrabbed && wall.isGrabbed)) {
-				if(canFind(wall.blocks, position - wall.position))
-					return false;
-			}
-		}
-		return true;
-	}
-	
-	Wall getItem(Point position, Side direction) pure {
-		position += getOffset(direction);
-		
-		foreach(Wall wall; walls) {
-			if(canFind(wall.blocks, position - wall.position))
-				return wall;
-		}
-		return null;
 	}
 }
 
