@@ -4,8 +4,10 @@ import dsfml.graphics;
 
 import camera;
 import game;
+import gamescreen;
 import geometry;
 import input;
+import menuscreen;
 import utility;
 
 enum BLOCK_SIZE = 16;
@@ -16,9 +18,7 @@ enum CAMERA_CONTROL_FACTOR = 2; // X times as much as above
 enum SWITCH_GRIP = false;
 enum AUTO_RELEASE = false;
 
-class MazeScreen : Drawable {
-	Game game;
-	
+class MazeScreen : GameScreen {
 	Camera camera;
 	Stage stage;
 	Pusher player;
@@ -26,7 +26,7 @@ class MazeScreen : Drawable {
 	VertexArray[int] playerSprites;
 	
 	this(Game game) {
-		this.game = game;
+		super(game);
 		
 		// Setup sprites
 		playerSprites = setupPlayerSprites();
@@ -41,7 +41,7 @@ class MazeScreen : Drawable {
 		camera.reset(player.position.toVector2f);
 	}
 	
-	void cycle(in InputState input, in float frameDelta) {
+	override void cycle(in InputState input, in float frameDelta) {
 		// Grab walls
 		bool grabItem, releaseItem;
 		if(SWITCH_GRIP) {
@@ -91,9 +91,7 @@ class MazeScreen : Drawable {
 					setTitleFromStage(game.window, stage);
 					camera.reset(player.position.toVector2f);
 				} else {
-					// TODO: anything else!
-					game.isRunning = false;
-					return;
+					game.nextScreen = new MenuScreen(game);
 				}
 			}
 		}
@@ -109,7 +107,7 @@ class MazeScreen : Drawable {
 		camera.update(frameDelta);
 	}
 	
-	void draw(RenderTarget renderTarget, RenderStates states) {
+	override void draw(RenderTarget renderTarget, RenderStates states) {
 		// Set camera
 		enum centeringOffset = Vector2f(.5f, .5f);
 		auto cameraView = game.view;

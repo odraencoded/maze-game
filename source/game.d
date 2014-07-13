@@ -2,6 +2,7 @@ import std.algorithm;
 
 import dsfml.graphics;
 
+import gamescreen;
 import geometry;
 import course; 
 
@@ -16,6 +17,8 @@ enum GAME_TITLE_SEPARATOR = " - ";
 class Game {
 	RenderWindow window;
 	bool isRunning;
+	
+	GameScreen currentScreen, nextScreen;
 	
 	RenderTexture buffer;
 	View view;

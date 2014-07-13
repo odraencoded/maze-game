@@ -21,9 +21,6 @@ enum CAMERA_KEY = Keyboard.Key.W;
 
 enum BACKGROUND_COLOR = Color(64, 64, 64, 255);
 
-enum TEST_PATH = "resources" ~ slash ~ "test";
-enum TEST_COURSE_PATH = TEST_PATH ~ slash  ~ "course";
-
 enum DEFAULT_SCALING_MODE = ScalingMode.PixelPerfect;
 
 void main(string[] args) {
@@ -33,15 +30,6 @@ void main(string[] args) {
 	auto window = game.window = setupWindow();
 	game.resizer.scalingMode = DEFAULT_SCALING_MODE;
 	game.resizer.checkSize();
-	
-	// Setup game course
-	// If a directory wasn't passed in the arguments, load the test course
-	string coursePath = args.length > 1 ? args[1] : TEST_COURSE_PATH;
-	auto course = game.course = coursePath.loadCourse();
-	game.progress = 0;
-	
-	// Setup first stage
-	game.stage = game.course.buildStage(game.progress);
 	
 	// Setup input
 	InputState input = new InputState;
@@ -53,7 +41,16 @@ void main(string[] args) {
 	input.bind(CAMERA_KEY  , Command.Camera );
 	
 	// Setup screen
-	auto mazeScreen = new MazeScreen(game);
+	// If a directory is passed in the arguments we load it directly
+	if(args.length > 1) {
+		game.course = loadCourse(args[1]);
+		game.progress = 0;
+		game.stage = game.course.buildStage(game.progress);
+		
+		game.currentScreen = new MazeScreen(game);
+	} else {
+		game.currentScreen = new MenuScreen(game);
+	}
 	
 	// Main loop
 	game.isRunning = true;
@@ -95,24 +92,30 @@ void main(string[] args) {
 		if(input.close)
 			window.close();
 		
+		// Logic part of the logic/draw cycle
+		game.currentScreen.cycle(input, frameDelta);
+		
 		// Exiting loop
 		game.isRunning = game.isRunning && window.isOpen();
 		if(!game.isRunning)
 			break;
 		
-		// Logic part of the logic/draw cycle
-		mazeScreen.cycle(input, frameDelta);
-		
 		// Draw stuff
 		auto buffer = game.buffer;
 		buffer.clear(BACKGROUND_COLOR);
 		
-		buffer.draw(mazeScreen);
+		buffer.draw(game.currentScreen);
 		
 		buffer.display();
 		
 		window.draw(game.resizer);
 		window.display();
+		
+		// Changing screens
+		if(game.nextScreen) {
+			game.currentScreen = game.nextScreen;
+			game.nextScreen = null;
+		}
 		
 		// Cleaning up the trash
 		GC.collect();
