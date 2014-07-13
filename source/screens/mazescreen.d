@@ -37,7 +37,7 @@ class MazeScreen : GameScreen {
 		camera.speed = CAMERA_SPEED;
 		
 		stage = game.stage;
-		player = stage.player;
+		player = stage.pushers[0];
 		game.subtitle = stage.metadata.title;
 		camera.reset(player.position.toVector2f);
 	}
@@ -88,7 +88,7 @@ class MazeScreen : GameScreen {
 				game.progress++;
 				if(game.progress < game.course.length) {
 					stage = game.stage = game.course.buildStage(game.progress);
-					player = stage.player;
+					player = stage.pushers[0];
 					game.subtitle = stage.metadata.title;
 					camera.reset(player.position.toVector2f);
 				} else {
@@ -284,7 +284,7 @@ private bool movePlayer(scope Game game, scope Point movement) pure {
 	
 	// Memoize stuff
 	auto stage = game.stage;
-	auto player = stage.player;
+	auto player = stage.pushers[0];
 	
 	// Remove second axis from movement
 	if(movement.x && movement.y) {

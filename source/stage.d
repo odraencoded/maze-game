@@ -7,7 +7,7 @@ import geometry;
 class Stage {
 	const StageInfo metadata;
 	
-	Pusher player;
+	Pusher[] pushers;
 	Wall[] walls;
 	Exit[] exits;
 	

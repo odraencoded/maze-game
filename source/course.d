@@ -10,7 +10,7 @@ import geometry;
 import json;
 import utility;
 
-enum PLAYER_COLOR = Color.Green;
+enum PUSHER_COLOR = Color.Green;
 enum EXIT_COLOR = Color.Blue;
 enum WALL_COLOR = Color.Black;
 enum FIXED_WALL_COLOR = Color.Red;
@@ -216,21 +216,20 @@ public Stage loadBitmapStage(scope Image bitmap, in StageInfo metadata) {
 		checkedPoints[position] = true;
 		
 		auto pixel = bitmap.getPixel(x, y);
-		if(pixel == PLAYER_COLOR) {
-			if(newStage.player)
-				throw new Exception(null);
-			
-			newStage.player = new Pusher();
-			newStage.player.position = position;
+		if(pixel == PUSHER_COLOR) {
+			auto newPusher = new Pusher();
+			newPusher.position = position;
 			
 			Side neighbours = GetNeighbourPixels(x, y, bitmap, bitmapFrame);
 			
 			foreach(Side aCrossSide; CrossSides) {
 				if(neighbours & aCrossSide) {
-					newStage.player.facing = aCrossSide.getOpposite();
+					newPusher.facing = aCrossSide.getOpposite();
 					break;
 				}
 			}
+			
+			newStage.pushers ~= newPusher;
 		} else if(pixel == EXIT_COLOR) {
 			auto newExit = new Exit();
 			newExit.position = position;
