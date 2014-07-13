@@ -19,6 +19,17 @@ class InputState {
 		_directional_input[OnOffState.TurnedOn ] = Side.None;
 	}
 	
+	/++
+	 + Make the input state good as new.
+	 +/
+	void reset() pure @safe {
+		foreach(ref OnOffState state; _input)
+			state = OnOffState.Off;
+		
+		foreach(ref Side state; _directional_input)
+			state = Side.None;
+	}
+	
 	OnOffState opIndex(in int command) const pure @safe {
 		return _input[command];
 	}
@@ -83,7 +94,7 @@ class InputState {
 	 +/
 	void pressKey(in int key) pure @safe {
 		int* value = key in bindings;
-		if(value)
+		if(value && !_input[*value].hasFlag(OnOffState.On))
 			_input[*value] = OnOffState.TurnedOn;
 	}
 	
@@ -92,7 +103,7 @@ class InputState {
 	 +/
 	void releaseKey(in int key) pure @safe {
 		int* value = key in bindings;
-		if(value)
+		if(value && !_input[*value].hasFlag(OnOffState.Off))
 			_input[*value] = OnOffState.TurnedOff;
 	}
 	

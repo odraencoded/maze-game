@@ -124,6 +124,9 @@ void main(string[] args) {
 			
 			// Reset view
 			game.view.reset(FloatRect(Vector2f(0, 0), game.view.size));
+			
+			// Reset input so that it's not carried on to the next screen
+			input.reset();
 		}
 		
 		// Cleaning up the trash
