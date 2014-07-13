@@ -28,7 +28,7 @@ class Stage {
 		
 		foreach(Wall wall; walls) {
 			if(!(skippedGrabbed && wall.isGrabbed)) {
-				if(canFind(wall.blocks, position - wall.position))
+				if((position - wall.position) in wall.blocks)
 					return false;
 			}
 		}
@@ -39,7 +39,7 @@ class Stage {
 		position += getOffset(direction);
 		
 		foreach(Wall wall; walls) {
-			if(canFind(wall.blocks, position - wall.position))
+			if((position - wall.position) in wall.blocks)
 				return wall;
 		}
 		return null;

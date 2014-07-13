@@ -202,7 +202,8 @@ private void renderWall(in Wall wall, scope RenderTarget target) {
 	const int vertexCount = 8 * wall.blocks.length;
 	auto vertexArray = new VertexArray(PrimitiveType.Quads, vertexCount);
 	
-	foreach(int i, Point block; wall.blocks) {
+	int i = 0;
+	foreach(Point block,  Side joints; wall.blocks) {
 		const int fillIndex = i * 8 + 4;
 		const int inkIndex = i * 8;
 		
@@ -217,16 +218,10 @@ private void renderWall(in Wall wall, scope RenderTarget target) {
 		vertexArray[inkIndex + 2].position = Vector2f(r, b);
 		vertexArray[inkIndex + 3].position = Vector2f(l, b);
 		
-		bool[int] outlines;
-		outlines[Side.Top   ] = !canFind(wall.blocks, block + Point( 0, -1));
-		outlines[Side.Right ] = !canFind(wall.blocks, block + Point( 1,  0));
-		outlines[Side.Bottom] = !canFind(wall.blocks, block + Point( 0,  1));
-		outlines[Side.Left  ] = !canFind(wall.blocks, block + Point(-1,  0));
-		
-		if(outlines[Side.Top   ]) t += inkWidth;
-		if(outlines[Side.Right ]) r -= inkWidth;
-		if(outlines[Side.Bottom]) b -= inkWidth;
-		if(outlines[Side.Left  ]) l += inkWidth;
+		if(!joints.hasFlag(Side.Top   )) t += inkWidth;
+		if(!joints.hasFlag(Side.Right )) r -= inkWidth;
+		if(!joints.hasFlag(Side.Bottom)) b -= inkWidth;
+		if(!joints.hasFlag(Side.Left  )) l += inkWidth;
 		
 		vertexArray[fillIndex + 0].position = Vector2f(l, t);
 		vertexArray[fillIndex + 1].position = Vector2f(r, t);
@@ -240,6 +235,8 @@ private void renderWall(in Wall wall, scope RenderTarget target) {
 		
 		for(int j = inkIndex; j < inkIndex + 4; j++)
 			vertexArray[j].color = wall.isFixed ? fillColor : inkColor;
+		
+		i++;
 	}
 
 	RenderStates states;
@@ -303,7 +300,7 @@ private bool movePlayer(scope Game game, scope Point movement) pure {
 	bool canGrabMove = false;
 	if(player.isGrabbing) {
 		canGrabMove = true;
-		foreach(Point block; player.grabbedItem.blocks) {
+		foreach(Point block, Side joints; player.grabbedItem.blocks) {
 			block += player.grabbedItem.position;
 			if(!stage.canGo(block, direction, true)) {
 				canGrabMove = false;

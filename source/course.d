@@ -206,73 +206,88 @@ public Stage loadBitmapStage(scope Image bitmap, in StageInfo metadata) {
 	
 	auto newStage = new Stage(metadata);
 	
-	for(uint x=0; x<size.x; x += 2) {
-		for(uint y=0; y<size.y; y += 2) {
-			Point position = Point(x / 2, y / 2);
-			if(position in checkedPoints)
-				continue;
-			checkedPoints[position] = true;
+	for(uint i=0; i < stageFrame.area; i++) {
+		uint x = i % stageFrame.width * 2;
+		uint y = i / stageFrame.width * 2;
+		
+		Point position = Point(x / 2, y / 2);
+		if(position in checkedPoints)
+			continue;
+		checkedPoints[position] = true;
+		
+		auto pixel = bitmap.getPixel(x, y);
+		if(pixel == PLAYER_COLOR) {
+			if(newStage.player)
+				throw new Exception(null);
 			
-			auto pixel = bitmap.getPixel(x, y);
-			if(pixel == PLAYER_COLOR) {
-				if(newStage.player)
-					throw new Exception(null);
-				
-				newStage.player = new Pusher();
-				newStage.player.position = position;
-				
-				Side neighbours = GetNeighbourPixels(x, y, bitmap, bitmapFrame);
-				
-				foreach(Side aCrossSide; CrossSides) {
-					if(neighbours & aCrossSide) {
-						newStage.player.facing = aCrossSide.getOpposite();
-						break;
-					}
+			newStage.player = new Pusher();
+			newStage.player.position = position;
+			
+			Side neighbours = GetNeighbourPixels(x, y, bitmap, bitmapFrame);
+			
+			foreach(Side aCrossSide; CrossSides) {
+				if(neighbours & aCrossSide) {
+					newStage.player.facing = aCrossSide.getOpposite();
+					break;
 				}
-			} else if(pixel == EXIT_COLOR) {
-				auto newExit = new Exit();
-				newExit.position = position;
-				newStage.exits ~= newExit;
-			} else if(pixel == WALL_COLOR || pixel == FIXED_WALL_COLOR) {
-				Point[] blocks, points;
-				blocks ~= position;
-				points ~= position;
+			}
+		} else if(pixel == EXIT_COLOR) {
+			auto newExit = new Exit();
+			newExit.position = position;
+			newStage.exits ~= newExit;
+		} else if(pixel == WALL_COLOR || pixel == FIXED_WALL_COLOR) {
+			Point[] points;
+			points ~= position;
+			
+			Side[Point] blocks;
+			blocks[position] = Side.None;
+			
+			while(points.length > 0) {
+				Point[] newPoints;
 				
-				while(points.length > 0) {
-					Point[] newPoints;
-					
-					foreach(Point point; points) {
-						foreach(Side aCrossSide; CrossSides) {
-							auto offset = aCrossSide.getOffset();
-							auto checkPoint = point + offset;
-							bool validCheck = stageFrame.contains(checkPoint) &&
-							                  !(checkPoint in checkedPoints);
-							if(validCheck) {
-								auto farPoint = checkPoint * 2;
-								auto nearPoint = farPoint - offset;
-								auto nearColor = bitmap.getPixel(nearPoint.x,
-								                                 nearPoint.y);
-								auto farColor = bitmap.getPixel(farPoint.x,
-								                                farPoint.y);
-								
-								if(nearColor == farColor &&
-								   farColor == pixel) {
-									blocks ~= checkPoint;
-									newPoints ~= checkPoint;
-									checkedPoints[checkPoint] = true;
-								}
+				foreach(Point point; points) {
+					foreach(Side aCrossSide; CrossSides) {
+						auto offset = aCrossSide.getOffset();
+						auto checkPoint = point + offset;
+						
+						if(!stageFrame.contains(checkPoint))
+							continue;
+						
+						Point nearPoint, farPoint;
+						Color nearColor, farColor;
+						
+						farPoint = checkPoint * 2;
+						nearPoint = farPoint - offset;
+						
+						nearColor = bitmap.getPixel(nearPoint.x, nearPoint.y);
+						farColor = bitmap.getPixel(farPoint.x, farPoint.y);
+						
+						if(nearColor == farColor && farColor == pixel) {
+							if(point in blocks)
+								blocks[point] |= aCrossSide;
+							else
+								blocks[point] = aCrossSide;
+							
+							if(checkPoint in blocks)
+								blocks[checkPoint] |= aCrossSide.getOpposite();
+							else
+								blocks[checkPoint] = aCrossSide.getOpposite();
+							
+							if(!(checkPoint in checkedPoints)) {
+								newPoints ~= checkPoint;
+								checkedPoints[checkPoint] = true;
 							}
 						}
 					}
-					points = newPoints;
 				}
-				
-				auto newWall = new Wall();
-				newWall.blocks = blocks;
-				if(pixel == FIXED_WALL_COLOR)
-					newWall.isFixed = true;
-				newStage.walls ~= newWall;
+				points = newPoints;
 			}
+			
+			auto newWall = new Wall();
+			newWall.blocks = blocks;
+			if(pixel == FIXED_WALL_COLOR)
+				newWall.isFixed = true;
+			newStage.walls ~= newWall;
 		}
 	}
 	

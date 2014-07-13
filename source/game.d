@@ -69,7 +69,7 @@ class Pusher {
 
 class Wall {
 	Point position;
-	Point[] blocks;
+	Side[Point] blocks;
 	bool isGrabbed;
 	bool isFixed;
 }
