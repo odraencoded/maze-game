@@ -24,7 +24,7 @@ enum BACKGROUND_COLOR = Color(64, 64, 64, 255);
 enum DEFAULT_SCALING_MODE = ScalingMode.PixelPerfect;
 
 void main(string[] args) {
-	Game game = new Game(GAME_WIDTH, GAME_HEIGHT);
+	Game game = new Game(GAME_TITLE, GAME_WIDTH, GAME_HEIGHT);
 	
 	// Open Window
 	auto window = game.window = setupWindow();

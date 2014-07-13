@@ -25,6 +25,7 @@ enum SELECTOR_Y = 16;
 enum MENU_X = SELECTOR_X + 16;
 enum MENU_Y = SELECTOR_Y - 6;
 
+enum MENUSCREEN_WINDOW_TITLE = "Main Menu";
 
 class MenuScreen : GameScreen {
 	int selection;
@@ -38,6 +39,7 @@ class MenuScreen : GameScreen {
 	
 	this(Game game) {
 		super(game);
+		game.subtitle = MENUSCREEN_WINDOW_TITLE;
 		
 		availableCourses = loadCourses(MAZES_DIRECTORY);
 		

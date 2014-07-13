@@ -37,7 +37,7 @@ class MazeScreen : GameScreen {
 		
 		stage = game.stage;
 		player = stage.player;
-		setTitleFromStage(game.window, stage);
+		game.subtitle = game.stage.title;
 		camera.reset(player.position.toVector2f);
 	}
 	
@@ -88,7 +88,7 @@ class MazeScreen : GameScreen {
 				if(game.progress < game.course.length) {
 					stage = game.stage = game.course.buildStage(game.progress);
 					player = stage.player;
-					setTitleFromStage(game.window, stage);
+					game.subtitle = stage.title;
 					camera.reset(player.position.toVector2f);
 				} else {
 					game.nextScreen = new MenuScreen(game);
@@ -274,14 +274,6 @@ private void renderExit(in Exit exit, scope RenderTarget target) {
 	);
 	
 	target.draw(vertexArray, states);
-}
-
-private void setTitleFromStage(scope Window window, in Stage stage) {
-	if(stage.title.length) {
-		window.setTitle(stage.title ~ GAME_TITLE_SEPARATOR ~ GAME_TITLE);
-	} else {
-		window.setTitle(GAME_TITLE);
-	}
 }
 
 /**
