@@ -111,8 +111,14 @@ Course loadCourse(in string directory) {
 		result.stageGens ~= new BitmapStageLoader(entry.path, entry.title);
 	}
 	
+	// Load course info if an info file is found
 	if(!(courseInfoPath is null))
 		result.info = loadCourseInfo(courseInfoPath);
+	
+	// Use directory name as fallback course title
+	if(result.info.title.length == 0) {
+		result.info.title = baseName(directory);
+	}
 	
 	return result;
 }
