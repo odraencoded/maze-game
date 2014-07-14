@@ -5,7 +5,8 @@ import geometry;
  +/
 enum Command {
 	GoUp, GoDown, GoRight, GoLeft,
-	Grab, Camera
+	CyclePrevious, CycleNext,
+	Grab, Camera, 
 }
 
 /++

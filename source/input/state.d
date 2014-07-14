@@ -72,6 +72,20 @@ class InputState {
 	}
 	
 	/++
+	 + Returns -1 if CyclePrevious are state.
+	 + Returns  1 if CycleNext are state.
+	 + Returns  0 if either or both are state.
+	 +/
+	int getRotation(in OnOffState state) const pure @safe {
+		int result;
+		if(_input[Command.CyclePrevious].hasFlag(state))
+			result--;
+		if(_input[Command.CycleNext].hasFlag(state))
+			result++;
+		return result;
+	}
+	
+	/++
 	 + Binds a keyboard key to a given command.
 	 +/
 	void bind(in int key, in int value) pure nothrow @safe {
