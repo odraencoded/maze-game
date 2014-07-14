@@ -43,6 +43,13 @@ class MazeScreen : GameScreen {
 	}
 	
 	override void cycle(in InputState input, in float frameDelta) {
+		// Change which Pusher the player is controlling
+		int cyclePusher = input.getRotation(OnOffState.TurnedOn);
+		if(cyclePusher) {
+			immutable int playerIndex = stage.pushers.countUntil(player);
+			player = stage.pushers[(playerIndex + cyclePusher) % $];
+		}
+		
 		// Grab walls
 		bool grabItem, releaseItem;
 		if(SWITCH_GRIP) {
@@ -79,7 +86,7 @@ class MazeScreen : GameScreen {
 		if(!cameraMode) {
 			// Getting player movement
 			Point movement = input.getOffset(OnOffState.TurnedOn);
-			playerMoved = movePlayer(game, movement);
+			playerMoved = movePlayer(game, player, movement);
 		}
 		
 		if(playerMoved) {
@@ -121,15 +128,17 @@ class MazeScreen : GameScreen {
 		}
 		
 		// Draw player
-		RenderStates state;
-		state.transform.translate(
-			player.position.x * BLOCK_SIZE,
-			player.position.y * BLOCK_SIZE
-		);
-		
-		auto playerSprite = playerSprites[player.facing];
-		
-		renderTarget.draw(playerSprite, state);
+		foreach(Pusher pusher; stage.pushers) {
+			RenderStates state;
+			state.transform.translate(
+				pusher.position.x * BLOCK_SIZE,
+				pusher.position.y * BLOCK_SIZE
+			);
+			
+			auto pusherSprite = playerSprites[pusher.facing];
+			
+			renderTarget.draw(pusherSprite, state);
+		}
 		
 		// Draw walls
 		foreach(Wall wall; stage.walls) {
@@ -277,14 +286,13 @@ private void renderExit(in Exit exit, scope RenderTarget target) {
 /**
  * Tries to move the player, returns whether it was actually moved.
  */
-private bool movePlayer(scope Game game, scope Point movement) pure {
+private bool movePlayer(scope Game game, scope Pusher player, scope Point movement) pure {
 	// Quickly return when movement is zero.
 	if(movement == Point(0, 0))
 		return false;
 	
 	// Memoize stuff
 	auto stage = game.stage;
-	auto player = stage.pushers[0];
 	
 	// Remove second axis from movement
 	if(movement.x && movement.y) {

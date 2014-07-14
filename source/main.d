@@ -12,12 +12,14 @@ import view;
 
 alias slash = dirSeparator;
 
-enum GO_UP_KEY = Keyboard.Key.I;
-enum GO_RIGHT_KEY = Keyboard.Key.L;
-enum GO_DOWN_KEY = Keyboard.Key.K;
-enum GO_LEFT_KEY = Keyboard.Key.J;
-enum GRAB_KEY = Keyboard.Key.D;
-enum CAMERA_KEY = Keyboard.Key.W;
+enum GO_UP_KEY          = Keyboard.Key.I;
+enum GO_RIGHT_KEY       = Keyboard.Key.L;
+enum GO_DOWN_KEY        = Keyboard.Key.K;
+enum GO_LEFT_KEY        = Keyboard.Key.J;
+enum CYCLE_PREIVOUS_KEY = Keyboard.Key.Q;
+enum CYCLE_NEXT_KEY     = Keyboard.Key.E;
+enum GRAB_KEY           = Keyboard.Key.D;
+enum CAMERA_KEY         = Keyboard.Key.W;
 
 enum BACKGROUND_COLOR = Color(64, 64, 64, 255);
 
@@ -33,12 +35,14 @@ void main(string[] args) {
 	
 	// Setup input
 	InputState input = new InputState;
-	input.bind(GO_UP_KEY   , Command.GoUp   );
-	input.bind(GO_RIGHT_KEY, Command.GoRight);
-	input.bind(GO_DOWN_KEY , Command.GoDown );
-	input.bind(GO_LEFT_KEY , Command.GoLeft );
-	input.bind(GRAB_KEY    , Command.Grab   );
-	input.bind(CAMERA_KEY  , Command.Camera );
+	input.bind(GO_UP_KEY         , Command.GoUp          );
+	input.bind(GO_RIGHT_KEY      , Command.GoRight       );
+	input.bind(GO_DOWN_KEY       , Command.GoDown        );
+	input.bind(GO_LEFT_KEY       , Command.GoLeft        );
+	input.bind(CYCLE_PREIVOUS_KEY, Command.CyclePrevious );
+	input.bind(CYCLE_NEXT_KEY    , Command.CycleNext     );
+	input.bind(GRAB_KEY          , Command.Grab          );
+	input.bind(CAMERA_KEY        , Command.Camera        );
 	
 	// Setup screen
 	// If a directory is passed in the arguments we load it directly
