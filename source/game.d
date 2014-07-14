@@ -46,34 +46,3 @@ class Game {
 		}
 	}
 }
-
-class Pusher {
-	Point position;
-	Side facing = Side.Down;
-	
-	Wall grabbedItem;
-	bool isGrabbing() const pure nothrow @safe {
-		return !(grabbedItem is null);
-	}
-	
-	void grabItem(Wall item) pure {
-		item.isGrabbed = true;
-		grabbedItem = item;
-	}
-	
-	void releaseItem() pure {
-		grabbedItem.isGrabbed = false;
-		grabbedItem = null;
-	}
-}
-
-class Wall {
-	Point position;
-	Side[Point] blocks;
-	bool isGrabbed;
-	bool isFixed;
-}
-
-class Exit {
-	Point position;
-}

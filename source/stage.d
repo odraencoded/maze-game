@@ -1,8 +1,10 @@
 import std.algorithm;
+import std.range;
 
 import course;
 import game;
 import geometry;
+import stageobject;
 
 class Stage {
 	const StageInfo metadata;
@@ -10,6 +12,10 @@ class Stage {
 	Pusher[] pushers;
 	Wall[] walls;
 	Exit[] exits;
+	
+	auto getObjects() {
+		return chain(pushers, walls);
+	}
 	
 	this(in StageInfo metadata) {
 		this.metadata = metadata;
@@ -23,23 +29,31 @@ class Stage {
 		return false;
 	}
 	
-	bool canGo(Point position, Side direction, bool skippedGrabbed) pure {
-		position += getOffset(direction);
+	/++
+	 + Returns obstacles between position and
+	 + the point at direction of position.
+	 +/
+	StageObject[] getObstacles(in Point position, in Side direction) {
+		immutable auto destination = position + direction.getOffset();
 		
-		foreach(Wall wall; walls) {
-			if(!(skippedGrabbed && wall.isGrabbed)) {
-				if((position - wall.position) in wall.blocks)
-					return false;
+		StageObject[] result;
+		auto objects = chain(pushers, walls);
+		
+		foreach(StageObject anObject; objects) {
+			immutable auto offset = anObject.getBlockOffset();
+			if(canFind(anObject.getBlocks(), destination - offset)) {
+				
+				result ~= anObject;
 			}
 		}
-		return true;
+		return result;
 	}
 	
-	Wall getItem(Point position, Side direction) pure {
+	Wall getItem(Point position, Side direction) {
 		position += getOffset(direction);
 		
 		foreach(Wall wall; walls) {
-			if((position - wall.position) in wall.blocks)
+			if(canFind(wall.getBlocks(), position - wall.getBlockOffset()))
 				return wall;
 		}
 		return null;

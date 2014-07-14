@@ -9,6 +9,7 @@ import geometry;
 import input;
 import menuscreen;
 import stage;
+import stageobject;
 import utility;
 
 enum BLOCK_SIZE = 16;
@@ -17,7 +18,6 @@ enum CAMERA_SPEED = 8; // X BLOCK_SIZE per BLOCK_SIZE of distance per second
 enum CAMERA_CONTROL_FACTOR = 2; // X times as much as above
 
 enum SWITCH_GRIP = false;
-enum AUTO_RELEASE = false;
 
 class MazeScreen : GameScreen {
 	Camera camera;
@@ -70,13 +70,9 @@ class MazeScreen : GameScreen {
 		
 		if(player.isGrabbing) {
 			if(releaseItem)
-				player.releaseItem();
-		} else {
-			if(grabItem) {
-				auto wall = stage.getItem(player.position, player.facing);
-				if(wall && !wall.isFixed)
-					player.grabItem(wall);
-			}
+				player.releaseObject();
+		} else if(grabItem) {
+			player.grabObject(stage);
 		}
 		
 		// Whether to move the player or the camera
@@ -86,7 +82,7 @@ class MazeScreen : GameScreen {
 		if(!cameraMode) {
 			// Getting player movement
 			Point movement = input.getOffset(OnOffState.TurnedOn);
-			playerMoved = movePlayer(game, player, movement);
+			playerMoved = movePlayer(movement);
 		}
 		
 		if(playerMoved) {
@@ -145,6 +141,38 @@ class MazeScreen : GameScreen {
 			renderWall(wall, renderTarget);
 		}
 	}
+	
+	/**
+	 * Tries to move the player, returns whether it was actually moved.
+	 */
+	private bool movePlayer(scope Point movement) {
+		// Quickly return when movement is zero.
+		if(movement == Point(0, 0))
+			return false;
+		
+		// Remove second axis from movement
+		if(movement.x && movement.y) {
+			if(player.facing & Side.Horizontal) 
+				movement.x = 0;
+			else
+				movement.y = 0;
+		}
+		
+		if(!player.isGrabbing && !player.isGrabbed) {
+			// Change facing
+			changeFacing(player.facing, movement);
+		}
+		
+		immutable Side direction = movement.getDirection();
+		immutable bool canMove = player.canMove(stage, direction);
+		if(canMove) {
+			// Move player
+			player.move(stage, direction);
+			return true;
+		}
+		
+		return false;
+	}
 }
 
 private VertexArray[int] setupPlayerSprites() {
@@ -202,7 +230,7 @@ private void changeFacing(ref Side facing, in Point direction) pure {
 	}
 }
 
-private void renderWall(in Wall wall, scope RenderTarget target) {
+private void renderWall(scope Wall wall, scope RenderTarget target) {
 	enum ungrabbedColor = Color.Black;
 	enum grabbedColor = Color.Red;
 	enum inkColor = Color.White;
@@ -243,11 +271,11 @@ private void renderWall(in Wall wall, scope RenderTarget target) {
 			vertexArray[j].color = fillColor;
 		
 		for(int j = inkIndex; j < inkIndex + 4; j++)
-			vertexArray[j].color = wall.isFixed ? fillColor : inkColor;
+			vertexArray[j].color = wall.isGrabbable ? inkColor : fillColor;
 		
 		i++;
 	}
-
+	
 	RenderStates states;
 	states.transform.translate(
 		wall.position.x * BLOCK_SIZE,
@@ -281,72 +309,4 @@ private void renderExit(in Exit exit, scope RenderTarget target) {
 	);
 	
 	target.draw(vertexArray, states);
-}
-
-/**
- * Tries to move the player, returns whether it was actually moved.
- */
-private bool movePlayer(scope Game game, scope Pusher player, scope Point movement) pure {
-	// Quickly return when movement is zero.
-	if(movement == Point(0, 0))
-		return false;
-	
-	// Memoize stuff
-	auto stage = game.stage;
-	
-	// Remove second axis from movement
-	if(movement.x && movement.y) {
-		if(player.facing & Side.Horizontal) 
-			movement.x = 0;
-		else
-			movement.y = 0;
-	}
-	
-	Side direction = getDirection(movement);
-	
-	// Check if grabbed item can move
-	bool canGrabMove = false;
-	if(player.isGrabbing) {
-		canGrabMove = true;
-		foreach(Point block, Side joints; player.grabbedItem.blocks) {
-			block += player.grabbedItem.position;
-			if(!stage.canGo(block, direction, true)) {
-				canGrabMove = false;
-				break;
-			}
-		}
-	}
-	
-	// Check if player can move
-	bool canMove;
-	if(!AUTO_RELEASE && player.isGrabbing && !canGrabMove)
-		// If AUTO_RELEASE is off and the grab can't move,
-		// the player can't move either
-		canMove = false;
-	else
-		canMove = stage.canGo(player.position, direction, canGrabMove);
-	
-	if(canMove) {
-		if(canGrabMove) {
-			// Grab exists and can move
-			// Move grabbed item, don't change facing
-			player.grabbedItem.position += movement;
-		} else {
-			// Grab can't move, but player can
-			// Release grabbed item and change facing
-			if(player.isGrabbing)
-				player.releaseItem();
-			
-			changeFacing(player.facing, movement);
-		}
-		
-		// Move player
-		player.position += movement;
-		return true;
-	} else if(!player.isGrabbing) {
-		// Can't move, but isn't grabbing anything, just change facing
-		changeFacing(player.facing, movement);
-	}
-	
-	return false;
 }

@@ -8,6 +8,7 @@ import game;
 import stage;
 import geometry;
 import json;
+import stageobject;
 import utility;
 
 enum PUSHER_COLOR = Color.Green;
@@ -284,8 +285,7 @@ public Stage loadBitmapStage(scope Image bitmap, in StageInfo metadata) {
 			
 			auto newWall = new Wall();
 			newWall.blocks = blocks;
-			if(pixel == FIXED_WALL_COLOR)
-				newWall.isFixed = true;
+			newWall.grabbable = pixel != FIXED_WALL_COLOR;
 			newStage.walls ~= newWall;
 		}
 	}
