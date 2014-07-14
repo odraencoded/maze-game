@@ -21,7 +21,7 @@ enum CYCLE_NEXT_KEY     = Keyboard.Key.E;
 enum GRAB_KEY           = Keyboard.Key.D;
 enum CAMERA_KEY         = Keyboard.Key.W;
 
-enum BACKGROUND_COLOR = Color(64, 64, 64, 255);
+enum BACKGROUND_COLOR = Color(32, 32, 32, 255);
 
 enum DEFAULT_SCALING_MODE = ScalingMode.PixelPerfect;
 

@@ -20,6 +20,11 @@ interface StageObject {
 	Point getBlockOffset();
 	
 	/++
+	 + Whether this object gets in the way of others.
+	 +/
+	bool isObstacle() @property;
+	
+	/++
 	 + Whether the object can be grabbed right now.
 	 +/
 	bool isGrabbable() @property;
@@ -104,11 +109,13 @@ interface StageObject {
 abstract class SimpleStageObject : StageObject {
 	Point position;
 	
-	bool grabbable;
+	bool grabbable, obstacle;
 	Pusher grabber;
 	
 	const(Point[]) getBlocks() { return SINGLE_BLOCK_ARRAY; }
 	Point getBlockOffset() { return position; }
+	
+	bool isObstacle() { return obstacle; }
 	
 	bool isGrabbable() @property { return grabbable; }
 	bool isGrabbed() @property { return !(grabber is null); }
@@ -155,9 +162,11 @@ class Pusher : SimpleStageObject  {
 	Side facing = Side.Down;
 	
 	StageObject grabbedObject;
+	Exit exit;
 	
 	this() {
 		grabbable = true;
+		obstacle = true;
 	}
 	
 	bool isGrabbing() @property { return !(grabbedObject is null); }
@@ -196,8 +205,12 @@ class Pusher : SimpleStageObject  {
 
 class Wall : SimpleStageObject {
 	Side[Point] blocks;
-	
 	Point[] blockPoints = null;
+	
+	this() {
+		grabbable = true;
+		obstacle = true;
+	}
 	
 	override const(Point[]) getBlocks() {
 		if(blockPoints is null) {

@@ -21,25 +21,31 @@ class Stage {
 		this.metadata = metadata;
 	}
 	
-	bool isOnExit(Point point) pure {
+	Exit getExit(in Point point) pure {
 		foreach(Exit exit; exits) {
-			if(exit.position == point)
-				return true;
+			if(exit.position == point) {
+				return exit;
+			}
 		}
-		return false;
+		return null;
 	}
 	
 	/++
 	 + Returns obstacles between position and
 	 + the point at direction of position.
 	 +/
-	StageObject[] getObstacles(in Point position, in Side direction) {
+	StageObject[]
+	getObstacles(in Point position, in Side direction = Side.None) {
 		immutable auto destination = position + direction.getOffset();
 		
 		StageObject[] result;
 		auto objects = chain(pushers, walls);
 		
 		foreach(StageObject anObject; objects) {
+			// Skip non-obstacles
+			if(!anObject.isObstacle)
+				continue;
+			
 			immutable auto offset = anObject.getBlockOffset();
 			if(canFind(anObject.getBlocks(), destination - offset)) {
 				

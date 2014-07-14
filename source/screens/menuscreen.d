@@ -65,8 +65,8 @@ class MenuScreen : GameScreen {
 	
 	override void cycle(in InputState input, in float delta) {
 		auto selectionChange = input.getOffset(OnOffState.TurnedOn).y;
-		selection = (selection + selectionChange) % courseMenuItems.length;
-		
+		selection += selectionChange + courseMenuItems.length;
+		selection %= courseMenuItems.length;
 		if(input.wasTurnedOn(Command.Grab)) {
 			game.course = availableCourses[selection];
 			game.progress = 0;
