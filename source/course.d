@@ -1,11 +1,17 @@
-import std.stdio;
+import std.file;
+import std.json;
+import std.string;
 
 import dsfml.graphics;
 
 import game;
+import stage;
 import geometry;
+import json;
+import stageobject;
+import utility;
 
-enum PLAYER_COLOR = Color.Green;
+enum PUSHER_COLOR = Color.Green;
 enum EXIT_COLOR = Color.Blue;
 enum WALL_COLOR = Color.Black;
 enum FIXED_WALL_COLOR = Color.Red;
@@ -15,32 +21,52 @@ enum FIXED_WALL_COLOR = Color.Red;
  * A course is a collection of stages.
  */
 class Course {
+	CourseInfo info;
+	StageEntry[] stages;
+	
+	this() {
+		info = new CourseInfo();
+	}
+	
 	/**
 	 * The number of stages in this course.
 	 */
 	int length() const @property {
-		return stageGens.length;
+		return stages.length;
 	}
 	
 	/**
 	 * Creates the selected stage and returns it.
 	 */
 	Stage buildStage(int index) const {
-		auto aStageGen = stageGens[index];
-		auto stage = aStageGen.buildStage();
-		stage.title = aStageGen.getTitle();
+		auto aStageGen = stages[index].generator;
+		auto stage = aStageGen.buildStage(this.stages[index].metadata);
 		return stage;
 	}
-	
-	StageGenerator[] stageGens;
+}
+
+/++
+ + Metadata of a Course.
+ +/
+class CourseInfo {
+	string title;
+	string[] authors;
+	string url;
+}
+
+/++
+ + Represents a stage in a course.
+ +/
+class StageEntry {
+	StageGenerator generator;
+	StageInfo metadata;
 }
 
 /**
  * Loads a course from a directory
  */
-Course loadCourse(string directory) {
+Course loadCourse(in string directory) {
 	// It takes a lot of stuff to read a directory :/
-	import std.file;
 	import std.stdio;
 	import std.regex;
 	import std.path;
@@ -64,6 +90,9 @@ Course loadCourse(string directory) {
 	}
 	StageFileEntry[] stageFiles;
 	
+	enum COURSE_INFO_FILENAME = "course";
+	string courseInfoPath = null;
+	
 	foreach(string path; dirEntries(directory, SpanMode.shallow))
 	{
 		auto filename = baseName(stripExtension(path));
@@ -86,14 +115,50 @@ Course loadCourse(string directory) {
 					break;
 			}
 			stageFiles.insertInPlace(i, newEntry);
+		} else if(filename.cmp(COURSE_INFO_FILENAME) == 0) {
+			// Set path to file containing data about the course
+			courseInfoPath = path;
 		}
 	}
 	
 	// Create a generator for each stage
 	Course result = new Course();
-	foreach(StageFileEntry entry; stageFiles) {
-		result.stageGens ~= new BitmapStageLoader(entry.path, entry.title);
+	foreach(StageFileEntry aFileEntry; stageFiles) {
+		auto newStageEntry = new StageEntry();
+		newStageEntry.generator = new BitmapStageLoader(aFileEntry.path);
+		
+		auto newMetadata = new StageInfo();
+		newMetadata.title = aFileEntry.title;
+		newStageEntry.metadata = newMetadata;
+		
+		result.stages ~= newStageEntry;
 	}
+	
+	// Load course info if an info file is found
+	if(!(courseInfoPath is null))
+		result.info = loadCourseInfo(courseInfoPath);
+	
+	// Use directory name as fallback course title
+	if(result.info.title.length == 0) {
+		result.info.title = baseName(directory);
+	}
+	
+	return result;
+}
+
+/**
+ * Attempts to load a directory subdirectories as courses.
+ */
+Course[] loadCourses(in string directory) {
+	string[] subdirs;
+	foreach(DirEntry anEntry; dirEntries(directory, SpanMode.shallow)) {
+		if(anEntry.isDir)
+			subdirs ~= anEntry.name;
+	}
+	
+	Course[] result = new Course[subdirs.length];
+	foreach(int i, string aSubdir; subdirs)
+		result[i] = loadCourse(aSubdir);
 	
 	return result;
 }
@@ -102,8 +167,7 @@ Course loadCourse(string directory) {
  * Generates a stage. Duh.
  */
 interface StageGenerator {
-	string getTitle() const;
-	Stage buildStage() const;
+	Stage buildStage(in StageInfo metadata) const;
 }
 
 /**
@@ -111,102 +175,118 @@ interface StageGenerator {
  */
 class BitmapStageLoader : StageGenerator {
 	string path;
-	string title;
 	
-	this(string path, string title = null) {
+	this(string path) {
 		this.path = path;
-		this.title = title;
 	}
 	
-	string getTitle() const { return title; }
-	
-	Stage buildStage() const {
-		return LoadStage(path);
+	Stage buildStage(in StageInfo metadata) const {
+		return loadBitmapStage(path, metadata);
 	}
 }
 
 /**
  * Parses a bitmap file into a stage.
  */
-public Stage LoadStage(string path) {
+public Stage loadBitmapStage(in string path, in StageInfo metadata) {
+	enum BITMAP_STAGE_OPEN_ERROR_MESSAGE = "Couldn't open bitmap stage file";
+	
+	// Load stage bitmap from file
 	Image bitmap = new Image();
 	if(!bitmap.loadFromFile(path))
-		throw new Exception(null);
+		throw new Exception(BITMAP_STAGE_OPEN_ERROR_MESSAGE);
 	
+	return loadBitmapStage(bitmap, metadata);
+}
+
+public Stage loadBitmapStage(scope Image bitmap, in StageInfo metadata) {
 	auto size = bitmap.getSize();
 	Box bitmapFrame = {0, 0, size.x, size.y};
 	Box stageFrame = {0, 0, (size.x + 1) / 2, (size.y + 1) / 2};
 	bool[Point] checkedPoints;
 	
-	auto newStage = new Stage();
+	auto newStage = new Stage(metadata);
 	
-	for(uint x=0; x<size.x; x += 2) {
-		for(uint y=0; y<size.y; y += 2) {
-			Point position = Point(x / 2, y / 2);
-			if(position in checkedPoints)
-				continue;
-			checkedPoints[position] = true;
+	for(uint i=0; i < stageFrame.area; i++) {
+		uint x = i % stageFrame.width * 2;
+		uint y = i / stageFrame.width * 2;
+		
+		Point position = Point(x / 2, y / 2);
+		if(position in checkedPoints)
+			continue;
+		checkedPoints[position] = true;
+		
+		auto pixel = bitmap.getPixel(x, y);
+		if(pixel == PUSHER_COLOR) {
+			auto newPusher = new Pusher();
+			newPusher.position = position;
 			
-			auto pixel = bitmap.getPixel(x, y);
-			if(pixel == PLAYER_COLOR) {
-				if(newStage.player)
-					throw new Exception(null);
-				
-				newStage.player = new Pusher();
-				newStage.player.position = position;
-				
-				Side neighbours = GetNeighbourPixels(x, y, bitmap, bitmapFrame);
-				
-				foreach(Side aCrossSide; CrossSides) {
-					if(neighbours & aCrossSide) {
-						newStage.player.facing = aCrossSide.getOpposite();
-						break;
-					}
+			Side neighbours = GetNeighbourPixels(x, y, bitmap, bitmapFrame);
+			
+			foreach(Side aCrossSide; CrossSides) {
+				if(neighbours & aCrossSide) {
+					newPusher.facing = aCrossSide.getOpposite();
+					break;
 				}
-			} else if(pixel == EXIT_COLOR) {
-				auto newExit = new Exit();
-				newExit.position = position;
-				newStage.exits ~= newExit;
-			} else if(pixel == WALL_COLOR || pixel == FIXED_WALL_COLOR) {
-				Point[] blocks, points;
-				blocks ~= position;
-				points ~= position;
+			}
+			
+			newStage.pushers ~= newPusher;
+		} else if(pixel == EXIT_COLOR) {
+			auto newExit = new Exit();
+			newExit.position = position;
+			newStage.exits ~= newExit;
+		} else if(pixel == WALL_COLOR || pixel == FIXED_WALL_COLOR) {
+			Point[] points;
+			points ~= position;
+			
+			Side[Point] blocks;
+			blocks[position] = Side.None;
+			
+			while(points.length > 0) {
+				Point[] newPoints;
 				
-				while(points.length > 0) {
-					Point[] newPoints;
-					
-					foreach(Point point; points) {
-						foreach(Side aCrossSide; CrossSides) {
-							auto offset = aCrossSide.getOffset();
-							auto checkPoint = point + offset;
-							bool validCheck = stageFrame.contains(checkPoint) &&
-							                  !(checkPoint in checkedPoints);
-							if(validCheck) {
-								auto farPoint = checkPoint * 2;
-								auto nearPoint = farPoint - offset;
-								auto nearColor = bitmap.getPixel(nearPoint.x,
-								                                 nearPoint.y);
-								auto farColor = bitmap.getPixel(farPoint.x,
-								                                farPoint.y);
-								
-								if(nearColor == farColor &&
-								   farColor == pixel) {
-									blocks ~= checkPoint;
-									newPoints ~= checkPoint;
-									checkedPoints[checkPoint] = true;
-								}
+				foreach(Point point; points) {
+					foreach(Side aCrossSide; CrossSides) {
+						auto offset = aCrossSide.getOffset();
+						auto checkPoint = point + offset;
+						
+						if(!stageFrame.contains(checkPoint))
+							continue;
+						
+						Point nearPoint, farPoint;
+						Color nearColor, farColor;
+						
+						farPoint = checkPoint * 2;
+						nearPoint = farPoint - offset;
+						
+						nearColor = bitmap.getPixel(nearPoint.x, nearPoint.y);
+						farColor = bitmap.getPixel(farPoint.x, farPoint.y);
+						
+						if(nearColor == farColor && farColor == pixel) {
+							if(point in blocks)
+								blocks[point] |= aCrossSide;
+							else
+								blocks[point] = aCrossSide;
+							
+							if(checkPoint in blocks)
+								blocks[checkPoint] |= aCrossSide.getOpposite();
+							else
+								blocks[checkPoint] = aCrossSide.getOpposite();
+							
+							if(!(checkPoint in checkedPoints)) {
+								newPoints ~= checkPoint;
+								checkedPoints[checkPoint] = true;
 							}
 						}
 					}
-					points = newPoints;
 				}
-				
-				auto newWall = new Wall();
-				newWall.blocks = blocks;
-				if(pixel == FIXED_WALL_COLOR)
-					newWall.isFixed = true;
-				newStage.walls ~= newWall;
+				points = newPoints;
 			}
+			
+			auto newWall = new Wall();
+			newWall.blocks = blocks;
+			newWall.grabbable = pixel != FIXED_WALL_COLOR;
+			newStage.walls ~= newWall;
 		}
 	}
 	
@@ -226,6 +306,21 @@ auto GetNeighbourPixels(uint x, uint y, Image bitmap, Box bitmapFrame) {
 			   }
 			}
 		}
+	}
+	
+	return result;
+}
+
+CourseInfo loadCourseInfo(in string path) {
+	CourseInfo result = new CourseInfo();
+	
+	auto json = parseJSON(readText(path));
+	JSONValue[string] root;
+	
+	if(json.getJsonValue(root)) {
+		root.getJsonValue("title", result.title);
+		root.getJsonValues("authors", result.authors);
+		root.getJsonValue("url", result.url);
 	}
 	
 	return result;

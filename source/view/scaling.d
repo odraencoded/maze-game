@@ -27,7 +27,7 @@ class VideoResizer : Drawable {
 		Vector2u windowSize = game.window.size;
 		
 		// Update game window view size to window size
-		auto viewRect = FloatRect(Vector2f(0, 0), windowSize.to!Vector2f);
+		auto viewRect = FloatRect(Vector2f(0, 0), windowSize.toVector2f);
 		game.window.view = new View(viewRect);
 		
 		// The game.window.size must be greater or equal to game.size
@@ -69,7 +69,7 @@ class VideoResizer : Drawable {
 			}
 			
 			_bufferSprite.scale = scale;
-			game.view.size = viewSize.to!Vector2f;
+			game.view.size = viewSize.toVector2f;
 			
 			// Create a new buffer for the game
 			// Maybe there is a way to simply resize it?

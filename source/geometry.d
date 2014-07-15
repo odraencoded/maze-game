@@ -1,9 +1,11 @@
+import std.conv;
 import std.math;
+
 import dsfml.system.vector2;
 
-alias Point = Vector2!int;
-
 import utility;
+
+alias Point = Vector2!int;
 
 // Vector utilities
 U length(T : Vector2!U, U)(const T vector) {
@@ -15,8 +17,12 @@ T normalize(T : Vector2!U, U)(const T vector) {
 	return l > 0 ? vector / l : T(0, 0);
 }
 
-vT to(vT : Vector2!T, T, vU: Vector2!U, U)(const vU vector) {
-	return vT(vector.x, vector.y);
+Vector2!TTo toVector(TFrom, TTo)(in Vector2!TFrom vector) {
+	return Vector2!TTo(vector.x.to!TTo(), vector.y.to!TTo());
+}
+
+Vector2f toVector2f(T)(in Vector2!T vector) {
+	return vector.toVector!(T, float)();
 }
 
 T round(T: Vector2!U, U)(const T vector) {
@@ -28,10 +34,10 @@ T round(T: Vector2!U, U)(const T vector) {
  * The offset X goes from Left to Right, Y from Top to Bottom
  * If both are axes are non-zero a diagonal such as TopRight is returned.
  */
-Side getDirection(Point offset) {
+Side getDirection(scope Point offset) pure {
 	if(offset.x) offset.x /= abs(offset.x);
 	if(offset.y) offset.y /= abs(offset.y);
-	return directionTable[offset];
+	return DIRECTION_TABLE[offset];
 }
 
 /**
@@ -66,10 +72,10 @@ enum Side : ubyte {
  * So that side == getDirection(getOffset(side))
  *
  */
-Point getOffset(Side side) {
+Point getOffset(in Side side) pure @safe {
 	Point offset;
 	foreach(int flag; side.getFlags())
-		offset += offsetTable[flag];
+		offset += OFFSET_TABLE[flag];
 	return offset;
 }
 
@@ -77,7 +83,7 @@ Point getOffset(Side side) {
  * Returns a value which is the opposite Side of the input.
  * e.g getOpposite(Side.Right) == Side.Left
  */
-Side getOpposite(Side side) {
+Side getOpposite(in Side side) pure {
 	return cast(Side)(side << 4 | side >> 4);
 }
 
@@ -100,22 +106,22 @@ pure struct Box {
 public immutable Side[] CrossSides = [
 	Side.Top, Side.Right, Side.Bottom, Side.Left
 ];
-private immutable Side[Point] directionTable;
-private immutable Point[int] offsetTable;
+private immutable Side[Point] DIRECTION_TABLE;
+private immutable Point[int] OFFSET_TABLE;
 
 static this() {
 	// Initialize direction table
-	directionTable[Point( 0,  0)] = Side.None;
-	directionTable[Point( 0, -1)] = Side.Top;
-	directionTable[Point( 1, -1)] = Side.TopRight;
-	directionTable[Point( 1,  0)] = Side.Right;
-	directionTable[Point( 1,  1)] = Side.BottomRight;
-	directionTable[Point( 0,  1)] = Side.Bottom;
-	directionTable[Point(-1,  1)] = Side.BottomLeft;
-	directionTable[Point(-1,  0)] = Side.Left;
-	directionTable[Point(-1, -1)] = Side.TopLeft;
+	DIRECTION_TABLE[Point( 0,  0)] = Side.None;
+	DIRECTION_TABLE[Point( 0, -1)] = Side.Top;
+	DIRECTION_TABLE[Point( 1, -1)] = Side.TopRight;
+	DIRECTION_TABLE[Point( 1,  0)] = Side.Right;
+	DIRECTION_TABLE[Point( 1,  1)] = Side.BottomRight;
+	DIRECTION_TABLE[Point( 0,  1)] = Side.Bottom;
+	DIRECTION_TABLE[Point(-1,  1)] = Side.BottomLeft;
+	DIRECTION_TABLE[Point(-1,  0)] = Side.Left;
+	DIRECTION_TABLE[Point(-1, -1)] = Side.TopLeft;
 	
-	// Initialize offsetTable, which is the inverse of the directionTable
-	foreach(Point offset, Side side; directionTable)
-		offsetTable[side] = offset;
+	// Initialize OFFSET_TABLE, which is the inverse of the DIRECTION_TABLE
+	foreach(Point offset, Side side; DIRECTION_TABLE)
+		OFFSET_TABLE[side] = offset;
 }

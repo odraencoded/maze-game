@@ -1,19 +1,28 @@
-import std.algorithm;
-
 import dsfml.graphics;
 
-import geometry;
 import course; 
+import gamescreen;
+import geometry;
+import stage;
 
 import view;
+
+enum GAME_WIDTH = 320;
+enum GAME_HEIGHT = 180;
+enum GAME_FRAMERATE = 30;
+enum GAME_TITLE = "Maze Game";
+enum GAME_SUBTITLE_SEPARATOR = " - ";
 
 class Game {
 	RenderWindow window;
 	bool isRunning;
 	
+	GameScreen currentScreen, nextScreen;
+	
 	RenderTexture buffer;
 	View view;
 	immutable Vector2u size;
+	immutable string title;
 	
 	VideoResizer resizer;
 	
@@ -21,85 +30,19 @@ class Game {
 	Stage stage;
 	int progress;
 	
-	this(uint width, uint height) {
+	this(in string title, in uint width, in uint height) {
+		this.title = title;
 		size = Vector2u(width, height);
-		view = new View();
+		view = new View(FloatRect(Vector2f(0, 0), size.toVector2f));
 		
 		resizer = new VideoResizer(this);
 	}
-}
-
-enum OnOffState {
-	Off = 1,
-	On = 2,
-	Changed = 4,
 	
-	TurnedOff = Changed | Off,
-	TurnedOn = Changed | On
-}
-
-class Stage {
-	string title;
-	Pusher player;
-	Wall[] walls;
-	Exit[] exits;
-	
-	bool isOnExit(Point point) {
-		foreach(Exit exit; exits) {
-			if(exit.position == point)
-				return true;
+	void subtitle(string subtitle) @property {
+		if(subtitle is null || subtitle.length == 0) {
+			window.setTitle(title);
+		} else {
+			window.setTitle(title ~ GAME_SUBTITLE_SEPARATOR ~ subtitle);
 		}
-		return false;
 	}
-	
-	bool canGo(Point position, Side direction, bool skippedGrabbed) {
-		position += getOffset(direction);
-		
-		foreach(Wall wall; walls) {
-			if(!(skippedGrabbed && wall.isGrabbed)) {
-				if(canFind(wall.blocks, position - wall.position))
-					return false;
-			}
-		}
-		return true;
-	}
-	
-	Wall getItem(Point position, Side direction) {
-		position += getOffset(direction);
-		
-		foreach(Wall wall; walls) {
-			if(canFind(wall.blocks, position - wall.position))
-				return wall;
-		}
-		return null;
-	}
-}
-
-class Pusher {
-	Point position;
-	Side facing = Side.Down;
-	
-	Wall grabbedItem;
-	bool isGrabbing() const { return !(grabbedItem is null); }
-	
-	void grabItem(Wall item) {
-		item.isGrabbed = true;
-		grabbedItem = item;
-	}
-	
-	void releaseItem() {
-		grabbedItem.isGrabbed = false;
-		grabbedItem = null;
-	}
-}
-
-class Wall {
-	Point position;
-	Point[] blocks;
-	bool isGrabbed;
-	bool isFixed;
-}
-
-class Exit {
-	Point position;
 }
