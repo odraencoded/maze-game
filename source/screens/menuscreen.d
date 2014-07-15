@@ -20,20 +20,23 @@ enum MENU_TEXT_COLOR = Color.White;
 enum MENU_ITEM_HEIGHT = 25;
 
 enum SELECTOR_X = 16;
-enum SELECTOR_Y = 16;
+enum SELECTOR_Y = 64;
 
 enum MENU_X = SELECTOR_X + 16;
 enum MENU_Y = SELECTOR_Y - 6;
 
 enum MENUSCREEN_WINDOW_TITLE = "Main Menu";
 
+enum PLAY_OPTION_INDEX = 0;
+enum EXIT_OPTION_INDEX = 1;
+
 class MenuScreen : GameScreen {
 	int selection;
 	
-	Course[] availableCourses;
-	Text[] courseMenuItems;
-	
 	Font menuFont;
+	
+	Course[] availableCourses;
+	Text[] mainMenu, courseMenu, currentMenu;
 	
 	Drawable selectorSprite;
 	
@@ -41,51 +44,104 @@ class MenuScreen : GameScreen {
 		super(game);
 		game.subtitle = MENUSCREEN_WINDOW_TITLE;
 		
-		availableCourses = loadCourses(MAZES_DIRECTORY);
-		
 		menuFont = new Font();
 		menuFont.loadFromFile(MENU_FONT_FILENAME);
 		
-		courseMenuItems = new Text[availableCourses.length];
+		selectorSprite = setupSelectorSprite();
 		
+		availableCourses = loadCourses(MAZES_DIRECTORY);
+		auto courseTitles = new string[availableCourses.length];
 		foreach(int i, Course aCourse; availableCourses) {
+			courseTitles[i] = aCourse.info.title;
+		}
+		
+		courseMenu = createTexts(courseTitles);
+		if(courseMenu.length > 0)
+			courseMenu ~= null;
+		
+		courseMenu ~= createTexts(["Go back"]);
+		
+		auto mainMenuTexts = ["Play", "Exit"];
+		mainMenu = createTexts(mainMenuTexts);
+		
+		currentMenu = mainMenu;
+	}
+	
+	private Text[] createTexts(string[] strings) {
+		Text[] result = new Text[strings.length];
+		
+		foreach(int i, string aString; strings) {
 			Text newText = new Text();
 			
 			newText.setFont(menuFont);
 			newText.setCharacterSize(MENU_TEXT_SIZE);
 			newText.setColor(MENU_TEXT_COLOR);
-			newText.setString(aCourse.info.title.to!dstring);
-			newText.position = Vector2f(0, i * MENU_ITEM_HEIGHT);
+			newText.setString(aString.to!dstring);
 			
-			courseMenuItems[i] = newText;
+			result[i] = newText;
 		}
-		
-		selectorSprite = setupSelectorSprite();
+		return result;
 	}
 	
 	override void cycle(in InputState input, in float delta) {
+		// Get whether the selection changed
 		int selectionChange;
 		immutable auto systemInput = input.getSystemOffset(OnOffState.TurnedOn);
 		if(systemInput.x || systemInput.y) {
+			// system input(arrow keys) have precedence
 			selectionChange = systemInput.y;
 		} else {
 			selectionChange = input.getOffset(OnOffState.TurnedOn).y;
 		}
 		
-		selection += selectionChange + courseMenuItems.length;
-		selection %= courseMenuItems.length;
+		// Go to the next item that is not null
+		do {
+			selection += selectionChange + currentMenu.length;
+			selection %= currentMenu.length;
+		} while(currentMenu[selection] is null);
 		
+		// Whether the menu item has been activated
 		bool activate;
 		activate = input.wasKeyTurnedOn(SystemKey.Return);
 		activate |= input.wasTurnedOn(Command.Grab);
 		
 		if(activate) {
-			game.course = availableCourses[selection];
-			game.progress = 0;
-			game.stage = game.course.buildStage(game.progress);
-			
-			auto mazeScreen = new MazeScreen(game);
-			game.nextScreen = mazeScreen;
+			if(currentMenu == mainMenu) {
+				if(selection == PLAY_OPTION_INDEX) {
+					// Go to courses menu
+					currentMenu = courseMenu;
+					selection = 0;
+					
+				} else if(selection == EXIT_OPTION_INDEX) {
+					// Exit the game
+					game.isRunning = false;
+				}
+			} else {
+				if(selection == courseMenu.length - 1) {
+					// This is the go back option
+					currentMenu = mainMenu;
+					selection = 0;
+				} else {
+					// Go to maze screen and play the course
+					game.course = availableCourses[selection];
+					game.progress = 0;
+					game.stage = game.course.buildStage(game.progress);
+					
+					auto mazeScreen = new MazeScreen(game);
+					game.nextScreen = mazeScreen;
+				}
+			}
+		}
+		
+		// Checking whether the player cancelled the action
+		bool cancel;
+		cancel = input.wasKeyTurnedOn(SystemKey.Escape);
+		if(cancel) {
+			if(currentMenu == courseMenu) {
+				// Same as go back option
+				currentMenu = mainMenu;
+				selection = 0;
+			}
 		}
 	}
 	
@@ -99,8 +155,11 @@ class MenuScreen : GameScreen {
 		menuStates.transform.translate(MENU_X, MENU_Y);
 		menuStates.transform.translate(0, selection * MENU_ITEM_HEIGHT * -1);
 		
-		foreach(int i, Text aText; courseMenuItems) {
-			renderTarget.draw(aText, menuStates);
+		foreach(Text aText; currentMenu) {
+			if(aText) {
+				renderTarget.draw(aText, menuStates);
+			}
+			menuStates.transform.translate(0, MENU_ITEM_HEIGHT);
 		}
 	}
 }
