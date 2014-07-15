@@ -1,4 +1,4 @@
 module input;
 
-public import state;
+public import inputstate;
 public import commands;

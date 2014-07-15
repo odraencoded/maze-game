@@ -64,10 +64,22 @@ class MenuScreen : GameScreen {
 	}
 	
 	override void cycle(in InputState input, in float delta) {
-		auto selectionChange = input.getOffset(OnOffState.TurnedOn).y;
+		int selectionChange;
+		immutable auto systemInput = input.getSystemOffset(OnOffState.TurnedOn);
+		if(systemInput.x || systemInput.y) {
+			selectionChange = systemInput.y;
+		} else {
+			selectionChange = input.getOffset(OnOffState.TurnedOn).y;
+		}
+		
 		selection += selectionChange + courseMenuItems.length;
 		selection %= courseMenuItems.length;
-		if(input.wasTurnedOn(Command.Grab)) {
+		
+		bool activate;
+		activate = input.wasKeyTurnedOn(SystemKey.Return);
+		activate |= input.wasTurnedOn(Command.Grab);
+		
+		if(activate) {
 			game.course = availableCourses[selection];
 			game.progress = 0;
 			game.stage = game.course.buildStage(game.progress);
