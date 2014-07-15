@@ -1,6 +1,5 @@
 import dsfml.graphics;
 
-import course; 
 import gamescreen;
 import geometry;
 import stage;
@@ -25,10 +24,6 @@ class Game {
 	immutable string title;
 	
 	VideoResizer resizer;
-	
-	Course course;
-	Stage stage;
-	int progress;
 	
 	this(in string title, in uint width, in uint height) {
 		this.title = title;

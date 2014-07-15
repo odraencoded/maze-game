@@ -28,6 +28,8 @@ class MazeScreen : GameScreen {
 	
 	VertexArray[int] playerSprites;
 	
+	void delegate(MazeScreen) onStageComplete;
+	
 	this(Game game) {
 		super(game);
 		
@@ -37,8 +39,10 @@ class MazeScreen : GameScreen {
 		// Setup view
 		camera = new Camera();
 		camera.speed = CAMERA_SPEED;
-		
-		stage = game.stage;
+	}
+	
+	void setStage(Stage stage) {
+		this.stage = stage;
 		player = stage.pushers[0];
 		game.subtitle = stage.metadata.title;
 		camera.reset(player.position.toVector2f);
@@ -143,7 +147,7 @@ class MazeScreen : GameScreen {
 				}
 				
 				if(allOnExit) {
-					stageCompleted();
+					onStageComplete(this);
 				}
 			}
 		}
@@ -225,19 +229,6 @@ class MazeScreen : GameScreen {
 		}
 		
 		return false;
-	}
-
-	private void stageCompleted() {
-		// Change to the next stage
-		game.progress++;
-		if(game.progress < game.course.length) {
-			stage = game.stage = game.course.buildStage(game.progress);
-			player = stage.pushers[0];
-			game.subtitle = stage.metadata.title;
-			camera.reset(player.position.toVector2f);
-		} else {
-			game.nextScreen = new MenuScreen(game);
-		}
 	}
 }
 

@@ -4,6 +4,7 @@ import std.path: slash = dirSeparator;
 import dsfml.graphics;
 
 import course;
+import coursecontext;
 import game;
 import gamescreen;
 import input;
@@ -123,12 +124,12 @@ class MenuScreen : GameScreen {
 					selection = 0;
 				} else {
 					// Go to maze screen and play the course
-					game.course = availableCourses[selection];
-					game.progress = 0;
-					game.stage = game.course.buildStage(game.progress);
-					
-					auto mazeScreen = new MazeScreen(game);
-					game.nextScreen = mazeScreen;
+					auto selectedCourse = availableCourses[selection];
+					auto context = new CourseContext(game, selectedCourse);
+					context.onCourseComplete = (CourseContext ctx){
+						game.nextScreen = this;
+					};
+					context.startPlaying();
 				}
 			}
 		}

@@ -9,6 +9,7 @@ import course;
 import input;
 import screens;
 import view;
+import coursecontext;
 
 alias slash = dirSeparator;
 
@@ -47,14 +48,21 @@ void main(string[] args) {
 	// Setup screen
 	// If a directory is passed in the arguments we load it directly
 	if(args.length > 1) {
-		game.course = loadCourse(args[1]);
-		game.progress = 0;
-		game.stage = game.course.buildStage(game.progress);
+		auto course = loadCourse(args[1]);
+		auto context = new CourseContext(game, course);
 		
-		game.currentScreen = new MazeScreen(game);
+		context.startPlaying();
+		
+		context.onCourseComplete = (CourseContext context) {
+			game.nextScreen = new MenuScreen(game);
+		};
 	} else {
-		game.currentScreen = new MenuScreen(game);
+		game.nextScreen = new MenuScreen(game);
 	}
+	
+	// Switch screens
+	game.currentScreen = game.nextScreen;
+	game.nextScreen = null;
 	
 	// Main loop
 	game.isRunning = true;
