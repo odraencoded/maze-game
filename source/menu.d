@@ -6,6 +6,7 @@ import dsfml.graphics;
 import game;
 import input;
 import menu;
+import signal;
 import utility;
 
 // Must not forget I got this from of http://tenbytwenty.com/
@@ -85,8 +86,7 @@ class MenuContext : Drawable {
 		bool cancel;
 		cancel = input.wasKeyTurnedOn(SystemKey.Escape);
 		if(cancel) {
-			if(currentMenu.onCancel)
-				currentMenu.onCancel(currentMenu);
+			currentMenu.onCancel(currentMenu);
 		}
 	}
 	
@@ -111,12 +111,12 @@ class MenuContext : Drawable {
 
 class Menu {
 	MenuItem[] items;
-	void delegate(Menu menu) onCancel;
+	Signal!(Menu) onCancel;
 }
 
 class MenuItem {
 	Text text;
-	void delegate(MenuItem menuItem) onActivate;
+	Signal!(MenuItem) onActivate;
 }
 
 private auto setupSelectorSprite() {

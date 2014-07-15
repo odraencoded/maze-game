@@ -1,6 +1,7 @@
 import course;
 import game;
 import mazescreen;
+import signal;
 
 /++
  + Moves between stages when each stage is completed.
@@ -11,8 +12,8 @@ class CourseContext {
 	const Course course;
 	int currentStage;
 	
-	void delegate(CourseContext) onCourseComplete;
-	void delegate(CourseContext) onGameQuit;
+	Signal!(CourseContext) onCourseComplete;
+	Signal!(CourseContext) onGameQuit;
 	
 	this(Game game, in Course course) {
 		this.game = game;
@@ -25,8 +26,8 @@ class CourseContext {
 		
 		// Setup maze screen
 		auto mazeScreen = new MazeScreen(game);
-		mazeScreen.onStageComplete = &onStageComplete;
-		mazeScreen.onQuit = (MazeScreen screen) { onGameQuit(this); };
+		mazeScreen.onStageComplete ~= &onStageComplete;
+		mazeScreen.onQuit ~= { onGameQuit(this); };
 		
 		// Set stage
 		auto newStage = course.buildStage(currentStage);

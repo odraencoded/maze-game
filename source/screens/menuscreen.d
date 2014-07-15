@@ -36,18 +36,19 @@ class MenuScreen : GameScreen {
 		auto courseMenu = new Menu();
 		auto courseMenuItems = menuContext.createMenuItems(courseTitles);
 		
-		auto playCourse = (MenuItem item) {
+		auto playCourse = {
 			// Go to maze screen and play the course
 			auto selectedCourse = availableCourses[menuContext.selection];
 			auto context = new CourseContext(game, selectedCourse);
-			context.onGameQuit = context.onCourseComplete = (CourseContext ctx){
-				game.nextScreen = this;
-			};
+			
+			auto openMenuScreen = { game.nextScreen = this; };
+			context.onGameQuit ~= openMenuScreen;
+			context.onCourseComplete ~= openMenuScreen;
 			context.startPlaying();
 		};
 		
 		foreach(MenuItem anItem; courseMenuItems) {
-			anItem.onActivate = playCourse;
+			anItem.onActivate ~= playCourse;
 		}
 		
 		if(courseMenuItems.length > 0)
@@ -61,26 +62,22 @@ class MenuScreen : GameScreen {
 		mainMenu.items = menuContext.createMenuItems(mainMenuTexts);
 		
 		// Play menu item
-		mainMenu.items[0].onActivate = (MenuItem item) {
+		mainMenu.items[0].onActivate ~= {
 			menuContext.currentMenu = courseMenu;
 			menuContext.selection = 0;
 		};
 		
 		// Exit menu item
-		mainMenu.items[1].onActivate = (MenuItem item) {
-			game.isRunning = false;
-		};
+		mainMenu.items[1].onActivate ~= { game.isRunning = false; };
 		
 		// Pressing esc on course menu or activating "go back"
-		courseMenu.items[$ - 1].onActivate = (MenuItem item) {
+		auto goBackToMainMenu = {
 			menuContext.currentMenu = mainMenu;
 			menuContext.selection = 0;
 		};
 		
-		courseMenu.onCancel = (Menu menu) {
-			menuContext.currentMenu = mainMenu;
-			menuContext.selection = 0;
-		};
+		courseMenu.items[$ - 1].onActivate ~= goBackToMainMenu;
+		courseMenu.onCancel ~= goBackToMainMenu;
 		
 		menuContext.currentMenu = mainMenu;
 	}

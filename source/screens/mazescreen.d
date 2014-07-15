@@ -9,6 +9,7 @@ import geometry;
 import input;
 import menu;
 import menuscreen;
+import signal;
 import stage;
 import stageobject;
 import utility;
@@ -29,8 +30,8 @@ class MazeScreen : GameScreen {
 	
 	VertexArray[int] playerSprites;
 	
-	void delegate(MazeScreen) onStageComplete;
-	void delegate(MazeScreen) onQuit;
+	Signal!(MazeScreen) onStageComplete;
+	Signal!(MazeScreen) onQuit;
 	
 	this(Game game) {
 		super(game);
@@ -281,20 +282,13 @@ class PauseMenuScreen : GameScreen {
 		auto pauseMenu = new Menu();
 		pauseMenu.items = menuContext.createMenuItems(pauseMenuTexts);
 		
-		// Resume game
-		pauseMenu.items[0].onActivate = (MenuItem) {
-			game.nextScreen = mazeScreen;
-		};
-		
 		// Quit to menu
-		pauseMenu.items[1].onActivate = (MenuItem) {
-			mazeScreen.onQuit(mazeScreen);
-		};
+		pauseMenu.items[1].onActivate ~= { mazeScreen.onQuit(mazeScreen); };
 		
 		// Cancelling the pauseMenu returns to the game
-		pauseMenu.onCancel = (Menu menu) {
-			game.nextScreen = mazeScreen;
-		};
+		auto resumeGame = { game.nextScreen = mazeScreen; };
+		pauseMenu.onCancel ~= resumeGame;
+		pauseMenu.items[0].onActivate ~= resumeGame;
 		
 		menuContext.currentMenu = pauseMenu;
 	}

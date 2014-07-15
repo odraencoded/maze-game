@@ -53,9 +53,9 @@ void main(string[] args) {
 		
 		context.startPlaying();
 		
-		context.onGameQuit = context.onCourseComplete = (CourseContext ctx) {
-			game.nextScreen = new MenuScreen(game);
-		};
+		auto openMenuScreen = { game.nextScreen = new MenuScreen(game); };
+		context.onGameQuit ~= openMenuScreen;
+		context.onCourseComplete ~= openMenuScreen;
 	} else {
 		game.nextScreen = new MenuScreen(game);
 	}
