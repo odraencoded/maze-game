@@ -69,7 +69,7 @@ class VideoResizer : Drawable {
 			}
 			
 			_bufferSprite.scale = scale;
-			game.view.size = viewSize.toVector2f;
+			game.view.reset(FloatRect(Vector2f(0, 0), viewSize.toVector2f));
 			
 			// Create a new buffer for the game
 			// Maybe there is a way to simply resize it?

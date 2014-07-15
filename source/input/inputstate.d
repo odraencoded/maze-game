@@ -12,7 +12,7 @@ import utility;
 class InputState {
 	int[int] bindings;
 	
-	bool close;
+	bool close, lostFocus;
 	
 	this() {
 		_command_input = new OnOffState[Command.max + 1];
@@ -145,7 +145,7 @@ class InputState {
 		foreach(ref OnOffState value; _command_input)
 			value &= ~OnOffState.Changed;
 		
-		close = false;
+		close = lostFocus = false;
 		
 		_changed_key_input.length = 0;
 	}

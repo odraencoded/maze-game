@@ -12,6 +12,7 @@ class CourseContext {
 	int currentStage;
 	
 	void delegate(CourseContext) onCourseComplete;
+	void delegate(CourseContext) onGameQuit;
 	
 	this(Game game, in Course course) {
 		this.game = game;
@@ -25,6 +26,7 @@ class CourseContext {
 		// Setup maze screen
 		auto mazeScreen = new MazeScreen(game);
 		mazeScreen.onStageComplete = &onStageComplete;
+		mazeScreen.onQuit = (MazeScreen screen) { onGameQuit(this); };
 		
 		// Set stage
 		auto newStage = course.buildStage(currentStage);

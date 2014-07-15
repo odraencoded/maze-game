@@ -7,6 +7,7 @@ import game;
 import gamescreen;
 import geometry;
 import input;
+import menu;
 import menuscreen;
 import stage;
 import stageobject;
@@ -29,6 +30,7 @@ class MazeScreen : GameScreen {
 	VertexArray[int] playerSprites;
 	
 	void delegate(MazeScreen) onStageComplete;
+	void delegate(MazeScreen) onQuit;
 	
 	this(Game game) {
 		super(game);
@@ -48,55 +50,20 @@ class MazeScreen : GameScreen {
 		camera.reset(player.position.toVector2f);
 	}
 	
-	override void cycle(in InputState input, in float frameDelta) {
-		// Change which Pusher the player is controlling
-		int cyclePusher = input.getRotation(OnOffState.TurnedOn);
-		if(cyclePusher) {
-			// Get new pusher for player
-			Pusher newPlayer;
-			immutable int pusherCount = stage.pushers.length;
-			immutable int playerIndex = stage.pushers.countUntil(player);
-			int i = (playerIndex + 1) % pusherCount;
-			while(i != playerIndex) {
-				auto aPusher = stage.pushers[i];
-				
-				if(aPusher.exit) {
-					// Check if there is something over the exit
-					bool exitBlocked = false;
-					auto obstacles = stage.getObstacles(aPusher.position);
-					foreach(StageObject anObstacle; obstacles) {
-						if(anObstacle is player)
-							continue;
-						
-						exitBlocked = true;
-						break;
-					}
-					if(!exitBlocked) {
-						newPlayer = aPusher;
-						break;
-					}
-				} else {
-					newPlayer = aPusher;
-					break;
-				}
-				
-				i = (i + 1) % pusherCount;
-			}
-			
-			if(newPlayer) {
-				// When a pusher is on the exit and it's not the player
-				// it becomes hidden and no longer an obstacle
-				if(player.exit) {
-					player.obstacle = false;
-				}
-				
-				// Reverting the above
-				if(newPlayer.exit) {
-					newPlayer.obstacle = true;
-				}
-				player = newPlayer;
-			}
+	override void cycle(in InputState input, in float delta) {
+		bool pauseGame = false;
+		pauseGame |= input.wasKeyTurnedOn(SystemKey.Escape);
+		pauseGame |= input.lostFocus;
+		
+		if(pauseGame) {
+			auto pauseScreen = new PauseMenuScreen(game, this);
+			game.nextScreen = pauseScreen;
+			return;
 		}
+		
+		// Change which Pusher the player is controlling
+		int cyclingDirection = input.getRotation(OnOffState.TurnedOn);
+		cycleThroughPushers(cyclingDirection);
 		
 		// Grab walls
 		bool grabItem, releaseItem;
@@ -152,25 +119,20 @@ class MazeScreen : GameScreen {
 			}
 		}
 		
-		// Update camera
-		if(cameraMode) {
-			// Getting camera movement
-			Point movement = input.getOffset(OnOffState.On);
-			camera.focus = camera.center + movement * CAMERA_CONTROL_FACTOR;
-		} else {
-			camera.focus = player.position.toVector2f;
-		}
-		camera.update(frameDelta);
-		
-		// Update view
-		enum CENTERING_OFFSET = Vector2f(.5f, .5f);
-		auto cameraView = game.view;
-		cameraView.center = (camera.center + CENTERING_OFFSET) * BLOCK_SIZE;
-		cameraView.center = cameraView.center.round;
+		cycleCamera(input, delta);
 	}
 	
 	override void draw(RenderTarget renderTarget, RenderStates states) {
 		renderTarget.clear(BACKGROUND_COLOR);
+		
+		// Update view
+		enum CENTERING_OFFSET = Vector2f(.5f, .5f);
+		auto gameSize = game.view.size;
+		auto viewCenter = (camera.center + CENTERING_OFFSET) * BLOCK_SIZE;
+		auto viewTopLeft = (viewCenter - gameSize / 2).round;
+		auto viewRect = FloatRect(viewTopLeft, gameSize);
+		renderTarget.view = new View(viewRect);
+		
 		// Draw exits
 		foreach(Exit exit; stage.exits) {
 			renderExit(exit, renderTarget);
@@ -229,6 +191,136 @@ class MazeScreen : GameScreen {
 		}
 		
 		return false;
+	}
+	
+	/++
+	 + Updates camera position.
+	 +/
+	private void cycleCamera(in InputState input, in float delta) {
+		// Update camera
+		bool cameraMode = input.isOn(Command.Camera);
+		if(cameraMode) {
+			// Getting camera movement
+			Point movement = input.getOffset(OnOffState.On);
+			camera.focus = camera.center + movement * CAMERA_CONTROL_FACTOR;
+		} else {
+			camera.focus = player.position.toVector2f;
+		}
+		camera.update(delta);
+	}
+	
+	/++
+	 + Change player to the next/previous pusher
+	 +/
+	void cycleThroughPushers(in int direction) {
+		if(direction == 0)
+			return;
+		
+		// Get new pusher for player
+		Pusher newPlayer;
+		immutable int pusherCount = stage.pushers.length;
+		immutable int playerIndex = stage.pushers.countUntil(player);
+		int i = (playerIndex + direction + pusherCount) % pusherCount;
+		while(i != playerIndex) {
+			auto aPusher = stage.pushers[i];
+			
+			if(aPusher.exit) {
+				// Check if there is something over the exit
+				bool exitBlocked = false;
+				auto obstacles = stage.getObstacles(aPusher.position);
+				foreach(StageObject anObstacle; obstacles) {
+					if(anObstacle is player)
+						continue;
+					
+					exitBlocked = true;
+					break;
+				}
+				if(!exitBlocked) {
+					newPlayer = aPusher;
+					break;
+				}
+			} else {
+				newPlayer = aPusher;
+				break;
+			}
+			
+			i = (i + 1) % pusherCount;
+		}
+		
+		if(newPlayer) {
+			// When a pusher is on the exit and it's not the player
+			// it becomes hidden and no longer an obstacle
+			if(player.exit) {
+				player.obstacle = false;
+			}
+			
+			// Reverting the above
+			if(newPlayer.exit) {
+				newPlayer.obstacle = true;
+			}
+			player = newPlayer;
+		}
+	}
+}
+
+/++
+ + Shows a pause menu over a MazeScreen
+ +/
+class PauseMenuScreen : GameScreen {
+	MenuContext menuContext;
+	MazeScreen mazeScreen;
+	
+	this(Game game, MazeScreen screen) {
+		super(game);
+		
+		// Create the menu
+		this.mazeScreen = screen;
+		menuContext = new MenuContext();
+		
+		auto pauseMenuTexts = ["Resume", "Quit"];
+		auto pauseMenu = new Menu();
+		pauseMenu.items = menuContext.createMenuItems(pauseMenuTexts);
+		
+		// Resume game
+		pauseMenu.items[0].onActivate = (MenuItem) {
+			game.nextScreen = mazeScreen;
+		};
+		
+		// Quit to menu
+		pauseMenu.items[1].onActivate = (MenuItem) {
+			mazeScreen.onQuit(mazeScreen);
+		};
+		
+		// Cancelling the pauseMenu returns to the game
+		pauseMenu.onCancel = (Menu menu) {
+			game.nextScreen = mazeScreen;
+		};
+		
+		menuContext.currentMenu = pauseMenu;
+	}
+	
+	override void cycle(in InputState input, in float frameDelta) {
+		menuContext.cycle(input, frameDelta);
+	}
+	
+	override void draw(RenderTarget renderTarget, RenderStates states) {
+		// Draw background
+		mazeScreen.draw(renderTarget, states);
+		
+		// Reset view
+		renderTarget.view = game.view;
+		
+		// Draw curtain
+		enum CURTAIN_COLOR = Color(0, 0, 0, 160);
+		
+		auto gameSize = game.view.size;
+		auto curtain = new RectangleShape(gameSize);
+		curtain.fillColor(CURTAIN_COLOR);
+		
+		renderTarget.draw(curtain);
+		
+		// Draw menu
+		renderTarget.draw(menuContext);
 	}
 }
 

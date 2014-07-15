@@ -53,7 +53,7 @@ void main(string[] args) {
 		
 		context.startPlaying();
 		
-		context.onCourseComplete = (CourseContext context) {
+		context.onGameQuit = context.onCourseComplete = (CourseContext ctx) {
 			game.nextScreen = new MenuScreen(game);
 		};
 	} else {
@@ -95,6 +95,10 @@ void main(string[] args) {
 					input.releaseKey(event.key.code);
 					break;
 				
+				case(event.EventType.LostFocus):
+					input.lostFocus = true;
+					break;
+				
 				default:
 			}
 		}
@@ -133,9 +137,6 @@ void main(string[] args) {
 		if(game.nextScreen) {
 			game.currentScreen = game.nextScreen;
 			game.nextScreen = null;
-			
-			// Reset view
-			game.view.reset(FloatRect(Vector2f(0, 0), game.view.size));
 			
 			// Reset input so that it's not carried on to the next screen
 			input.reset();
