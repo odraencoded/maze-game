@@ -186,6 +186,9 @@ private void loadAssets(Game mazeGame) {
 		string[Asset] texturePaths;
 		texturePaths[Asset.PusherTexture] = SPRITES_DIRECTORY ~ "pusher.png";
 		texturePaths[Asset.GroundTexture] = SPRITES_DIRECTORY ~ "ground.png";
+		texturePaths[Asset.WallBackgroundTexture] = SPRITES_DIRECTORY ~ "wall-background.png";
+		texturePaths[Asset.WallForegroundTexture] = SPRITES_DIRECTORY ~ "wall-foreground.png";
+		texturePaths[Asset.WallOutlineTexture] = SPRITES_DIRECTORY ~ "wall-outline.png";
 		texturePaths[Asset.SymbolTexture] = SPRITES_DIRECTORY ~ "symbol.png";
 		
 		foreach(Asset aKey, string aTexturePath; texturePaths) {
@@ -210,6 +213,20 @@ private void loadAssets(Game mazeGame) {
 		immutable auto exitSpan = IntRect(0, 0, 3, 3);
 		immutable auto exitOrigin = Vector2f(1, 1);
 		groundMap.addPiece(GroundMapKeys.Exit, exitSpan, exitOrigin);
+		
+		// Wall sprite map
+		auto wallMap = new TextureMap(Point(8, 8));
+		assets.maps[Asset.WallMap] = wallMap;
+		
+		wallMap.addPiece(WallMapKeys.TopLeftSide    , IntRect(0, 0, 2, 2), Vector2f(1, 1));
+		wallMap.addPiece(WallMapKeys.TopSide        , IntRect(2, 0, 1, 2), Vector2f(0, 1));
+		wallMap.addPiece(WallMapKeys.TopRightSide   , IntRect(3, 0, 2, 2), Vector2f(0, 1));
+		wallMap.addPiece(WallMapKeys.RightSide      , IntRect(3, 2, 2, 1), Vector2f(0, 0));
+		wallMap.addPiece(WallMapKeys.BottomRightSide, IntRect(3, 3, 2, 2), Vector2f(0, 0));
+		wallMap.addPiece(WallMapKeys.BottomSide     , IntRect(2, 3, 1, 2), Vector2f(0, 0));
+		wallMap.addPiece(WallMapKeys.BottomLeftSide , IntRect(0, 3, 2, 2), Vector2f(1, 0));
+		wallMap.addPiece(WallMapKeys.LeftSide       , IntRect(0, 2, 2, 1), Vector2f(1, 0));
+		wallMap.addPiece(WallMapKeys.Fill           , IntRect(9, 0, 2, 2), Vector2f(0, 0));
 		
 		// Symbol sprite map
 		auto symbolMap = new TextureMap(Point(16, 16));

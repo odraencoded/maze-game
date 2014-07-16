@@ -6,6 +6,8 @@ import stage;
 
 import view;
 
+enum BLOCK_SIZE = 16;
+
 class Game {
 	RenderWindow window;
 	bool isRunning;
@@ -58,6 +60,11 @@ enum Asset {
 	GroundMap = "ground",
 	GroundTexture = "ground",
 	
+	WallMap = "wall",
+	WallBackgroundTexture = "wall-background",
+	WallForegroundTexture = "wall-foreground",
+	WallOutlineTexture = "wall-outline",
+	
 	SymbolMap = "symbol",
 	SymbolTexture = "symbol",
 }
@@ -68,6 +75,15 @@ enum PusherMapKeys {
 
 enum GroundMapKeys {
 	Exit,
+}
+
+enum WallMapKeys {
+	TopLeftSide   , TopSide   , TopRightSide   ,
+	LeftSide      , Fill      , RightSide      ,
+	BottomLeftSide, BottomSide, BottomRightSide,
+	
+	InnerTopLeftCorner   , InnerTopRightCorner   ,
+	InnerBottomLeftCorner, InnerBottomRightCorner,
 }
 
 enum SymbolMapKeys {

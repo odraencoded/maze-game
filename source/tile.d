@@ -70,6 +70,38 @@ class TileSprite : Drawable {
 	}
 }
 
+class VertexCache : Drawable {
+	Vertex[] vertices;
+	const(Texture)* texture;
+	Vector2i position;
+	
+	void add(in Vertex[] newVertices, in Vector2i offset = Vector2i(0, 0)) {
+		if(offset.x || offset.y) {
+			auto movedVertices = new Vertex[newVertices.length];
+			foreach(int i, const(Vertex) aVertex; newVertices) {
+				movedVertices[i] = Vertex(
+					aVertex.position + offset,
+					aVertex.color,
+					aVertex.texCoords);
+			}
+			vertices ~= movedVertices;
+		} else {
+			vertices ~= newVertices;
+		}
+	}
+	
+	void setColor(in Color color) {
+		foreach(ref Vertex aVertex; vertices)
+			aVertex.color = color;
+	}
+	
+	void draw(RenderTarget target, RenderStates states) {
+		states.texture = *texture;
+		states.transform.translate(position.x, position.y);
+		target.draw(vertices, PrimitiveType.Quads, states);
+	}
+}
+
 immutable(Vertex)[] toVertexArray(T)(in Rect!T box, in Vector2f origin) {
 	// Get the frame dimensions
 	immutable auto tl = Vector2f(0        , 0         );
