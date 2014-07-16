@@ -6,15 +6,11 @@ import stage;
 
 import view;
 
-enum GAME_WIDTH = 320;
-enum GAME_HEIGHT = 180;
-enum GAME_FRAMERATE = 30;
-enum GAME_TITLE = "Maze Game";
-enum GAME_SUBTITLE_SEPARATOR = " - ";
-
 class Game {
 	RenderWindow window;
 	bool isRunning;
+	
+	GameAssets assets;
 	
 	GameScreen currentScreen, nextScreen;
 	
@@ -30,14 +26,27 @@ class Game {
 		size = Vector2u(width, height);
 		view = new View(FloatRect(Vector2f(0, 0), size.toVector2f));
 		
+		assets = new GameAssets();
+		
 		resizer = new VideoResizer(this);
 	}
 	
 	void subtitle(string subtitle) @property {
+		enum GAME_SUBTITLE_SEPARATOR = " - ";
+		
 		if(subtitle is null || subtitle.length == 0) {
 			window.setTitle(title);
 		} else {
 			window.setTitle(title ~ GAME_SUBTITLE_SEPARATOR ~ subtitle);
 		}
 	}
+}
+
+class GameAssets {
+	Font menuFont;
+	Drawable[string] sprites;
+}
+
+enum Asset {
+	MenuSelector = "menu-selector",
 }

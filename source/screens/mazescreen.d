@@ -280,7 +280,7 @@ class PauseMenuScreen : GameScreen {
 		
 		// Create the menu
 		this.mazeScreen = screen;
-		menuContext = new MenuContext();
+		menuContext = new MenuContext(game.assets);
 		
 		auto resumeMenuItem = menuContext.createMenuItem("Resume");
 		auto restartMenuItem = menuContext.createMenuItem("Restart");

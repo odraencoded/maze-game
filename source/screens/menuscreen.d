@@ -25,7 +25,7 @@ class MenuScreen : GameScreen {
 		super(game);
 		game.subtitle = MENUSCREEN_WINDOW_TITLE;
 		
-		menuContext = new MenuContext();
+		menuContext = new MenuContext(game.assets);
 		
 		availableCourses = loadCourses(MAZES_DIRECTORY);
 		auto courseTitles = new string[availableCourses.length];
