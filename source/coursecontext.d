@@ -28,6 +28,10 @@ class CourseContext {
 		auto mazeScreen = new MazeScreen(game);
 		mazeScreen.onStageComplete ~= &onStageComplete;
 		mazeScreen.onQuit ~= { onGameQuit(this); };
+		mazeScreen.onRestart ~= (MazeScreen screen) {
+			auto stage = course.buildStage(currentStage);
+			screen.setStage(stage);
+		};
 		
 		// Set stage
 		auto newStage = course.buildStage(currentStage);

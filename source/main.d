@@ -21,6 +21,7 @@ enum CYCLE_PREIVOUS_KEY = Keyboard.Key.Q;
 enum CYCLE_NEXT_KEY     = Keyboard.Key.E;
 enum GRAB_KEY           = Keyboard.Key.D;
 enum CAMERA_KEY         = Keyboard.Key.W;
+enum RESTART_KEY        = Keyboard.Key.R;
 
 enum BACKGROUND_COLOR = Color(32, 32, 32, 255);
 
@@ -44,6 +45,7 @@ void main(string[] args) {
 	input.bind(CYCLE_NEXT_KEY    , Command.CycleNext     );
 	input.bind(GRAB_KEY          , Command.Grab          );
 	input.bind(CAMERA_KEY        , Command.Camera        );
+	input.bind(RESTART_KEY       , Command.Restart       );
 	
 	// Setup screen
 	// If a directory is passed in the arguments we load it directly

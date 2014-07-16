@@ -30,8 +30,8 @@ class MazeScreen : GameScreen {
 	
 	VertexArray[int] playerSprites;
 	
-	Signal!(MazeScreen) onStageComplete;
-	Signal!(MazeScreen) onQuit;
+	// Events
+	Signal!(MazeScreen) onStageComplete, onQuit, onRestart;
 	
 	this(Game game) {
 		super(game);
@@ -121,6 +121,10 @@ class MazeScreen : GameScreen {
 		}
 		
 		cycleCamera(input, delta);
+		
+		if(input.wasTurnedOn(Command.Restart)) {
+			onRestart(this);
+		}
 	}
 	
 	override void draw(RenderTarget renderTarget, RenderStates states) {
@@ -278,17 +282,25 @@ class PauseMenuScreen : GameScreen {
 		this.mazeScreen = screen;
 		menuContext = new MenuContext();
 		
-		auto pauseMenuTexts = ["Resume", "Quit"];
+		auto resumeMenuItem = menuContext.createMenuItem("Resume");
+		auto restartMenuItem = menuContext.createMenuItem("Restart");
+		auto quitMenuItem = menuContext.createMenuItem("Quit");
 		auto pauseMenu = new Menu();
-		pauseMenu.items = menuContext.createMenuItems(pauseMenuTexts);
-		
-		// Quit to menu
-		pauseMenu.items[1].onActivate ~= { mazeScreen.onQuit(mazeScreen); };
+		pauseMenu.items = [resumeMenuItem, restartMenuItem, quitMenuItem];
 		
 		// Cancelling the pauseMenu returns to the game
 		auto resumeGame = { game.nextScreen = mazeScreen; };
 		pauseMenu.onCancel ~= resumeGame;
-		pauseMenu.items[0].onActivate ~= resumeGame;
+		resumeMenuItem.onActivate ~= resumeGame;
+		
+		// Restart level
+		restartMenuItem.onActivate ~= {
+			mazeScreen.onRestart(mazeScreen);
+			resumeGame();
+		};
+		
+		// Quit to menu
+		quitMenuItem.onActivate ~= { mazeScreen.onQuit(mazeScreen); };
 		
 		menuContext.currentMenu = pauseMenu;
 	}

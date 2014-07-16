@@ -9,6 +9,7 @@ enum Command {
 	GoUp, GoDown, GoRight, GoLeft,
 	CyclePrevious, CycleNext,
 	Grab, Camera, 
+	Restart
 }
 
 /++

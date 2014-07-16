@@ -41,18 +41,23 @@ class MenuContext : Drawable {
 		MenuItem[] result = new MenuItem[strings.length];
 		
 		foreach(int i, string aString; strings) {
-			auto newText = new Text();
-			
-			newText.setFont(menuFont);
-			newText.setCharacterSize(MENU_TEXT_SIZE);
-			newText.setColor(MENU_TEXT_COLOR);
-			newText.setString(aString.to!dstring);
-			
-			auto newItem = new MenuItem();
-			newItem.text = newText;
-			result[i] = newItem;
+			result[i] = createMenuItem(aString);
 		}
 		return result;
+	}
+	
+	MenuItem createMenuItem(string aString) {
+		auto newText = new Text();
+		
+		newText.setFont(menuFont);
+		newText.setCharacterSize(MENU_TEXT_SIZE);
+		newText.setColor(MENU_TEXT_COLOR);
+		newText.setString(aString.to!dstring);
+		
+		auto newItem = new MenuItem();
+		newItem.text = newText;
+		return newItem;
+		
 	}
 	
 	void cycle(in InputState input, in float delta) {
