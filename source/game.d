@@ -43,10 +43,33 @@ class Game {
 }
 
 class GameAssets {
+	import tile;
+	
 	Font menuFont;
 	Drawable[string] sprites;
+	TextureMap[string] maps;
+	Texture[string] textures;
 }
 
 enum Asset {
-	MenuSelector = "menu-selector",
+	PusherMap = "pusher",
+	PusherTexture = "pusher",
+	
+	GroundMap = "ground",
+	GroundTexture = "ground",
+	
+	SymbolMap = "symbol",
+	SymbolTexture = "symbol",
+}
+
+enum PusherMapKeys {
+	PusherUp, PusherLeft, PusherRight, PusherDown,
+}
+
+enum GroundMapKeys {
+	Exit,
+}
+
+enum SymbolMapKeys {
+	MenuSelector,
 }

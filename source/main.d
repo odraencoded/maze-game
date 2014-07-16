@@ -167,6 +167,10 @@ private auto setupInput() {
 private void loadAssets(Game mazeGame) {
 	import dsfml.graphics;
 	
+	import tile;
+	
+	enum ASSETS_DIRECTORY = "assets" ~ slash;
+	enum SPRITES_DIRECTORY = ASSETS_DIRECTORY ~ "sprites" ~ slash;
 	enum MENU_FONT_FILENAME = "assets" ~ slash ~ "text" ~ slash ~ "Munro.ttf";
 	
 	auto assets = mazeGame.assets;
@@ -174,14 +178,43 @@ private void loadAssets(Game mazeGame) {
 	auto menuFont = assets.menuFont = new Font();
 	menuFont.loadFromFile(MENU_FONT_FILENAME);
 	
-	// Selector sprite
+	// Other sprites
 	{
-		VertexArray selector = new VertexArray(PrimitiveType.Triangles, 3);
-		selector[0].position = Vector2f(2, 2);
-		selector[1].position = Vector2f(2, 14);
-		selector[2].position = Vector2f(12, 8);
-		for(int i=0; i<3; i++) selector[i].color = Color.White;
+		import geometry : Point;
 		
-		assets.sprites[Asset.MenuSelector] = selector;
+		// Load textures
+		string[Asset] texturePaths;
+		texturePaths[Asset.PusherTexture] = SPRITES_DIRECTORY ~ "pusher.png";
+		texturePaths[Asset.GroundTexture] = SPRITES_DIRECTORY ~ "ground.png";
+		texturePaths[Asset.SymbolTexture] = SPRITES_DIRECTORY ~ "symbol.png";
+		
+		foreach(Asset aKey, string aTexturePath; texturePaths) {
+			auto newTexture = new Texture();
+			newTexture.loadFromFile(aTexturePath);
+			assets.textures[aKey] = newTexture;
+		}
+		
+		// Pusher sprite map
+		auto pusherMap = new TextureMap(Point(16, 16));
+		assets.maps[Asset.PusherMap] = pusherMap;
+		
+		pusherMap.addPiece(PusherMapKeys.PusherDown , Point(0, 0));
+		pusherMap.addPiece(PusherMapKeys.PusherLeft , Point(0, 1));
+		pusherMap.addPiece(PusherMapKeys.PusherRight, Point(0, 2));
+		pusherMap.addPiece(PusherMapKeys.PusherUp   , Point(0, 3));
+		
+		// Ground sprite map
+		auto groundMap = new TextureMap(Point(16, 16));
+		assets.maps[Asset.GroundMap] = groundMap;
+		
+		immutable auto exitSpan = IntRect(0, 0, 3, 3);
+		immutable auto exitOrigin = Vector2f(1, 1);
+		groundMap.addPiece(GroundMapKeys.Exit, exitSpan, exitOrigin);
+		
+		// Symbol sprite map
+		auto symbolMap = new TextureMap(Point(16, 16));
+		assets.maps[Asset.SymbolMap] = symbolMap;
+		
+		symbolMap.addPiece(SymbolMapKeys.MenuSelector , Point(0, 0));
 	}
 }

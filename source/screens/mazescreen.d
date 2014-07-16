@@ -21,23 +21,18 @@ enum CAMERA_CONTROL_FACTOR = 2; // X times as much as above
 
 enum SWITCH_GRIP = false;
 
-enum BACKGROUND_COLOR = Color(96, 96, 96);
+enum BACKGROUND_COLOR = Color(192, 192, 192);
 
 class MazeScreen : GameScreen {
 	Camera camera;
 	Stage stage;
 	Pusher player;
 	
-	VertexArray[int] playerSprites;
-	
 	// Events
 	Signal!(MazeScreen) onStageComplete, onQuit, onRestart;
 	
 	this(Game game) {
 		super(game);
-		
-		// Setup sprites
-		playerSprites = setupPlayerSprites();
 		
 		// Setup view
 		camera = new Camera();
@@ -128,6 +123,8 @@ class MazeScreen : GameScreen {
 	}
 	
 	override void draw(RenderTarget renderTarget, RenderStates states) {
+		import tile;
+		
 		renderTarget.clear(BACKGROUND_COLOR);
 		
 		// Update view
@@ -139,31 +136,47 @@ class MazeScreen : GameScreen {
 		renderTarget.view = new View(viewRect);
 		
 		// Draw exits
+		auto exitSpriteMap = game.assets.maps[Asset.GroundMap];
+		auto exitSprite = new TileSprite();
+		exitSprite.texture = &game.assets.textures[Asset.GroundTexture];
+		exitSprite.piece = &exitSpriteMap[GroundMapKeys.Exit];
 		foreach(Exit exit; stage.exits) {
-			renderExit(exit, renderTarget);
+			exitSprite.position = exit.position * BLOCK_SIZE;
+			renderTarget.draw(exitSprite);
 		}
 		
 		// Draw player
+		auto pusherSpriteMap = game.assets.maps[Asset.PusherMap];
+		auto pusherSprite = new TileSprite();
+		pusherSprite.texture = &game.assets.textures[Asset.PusherTexture];
+		
 		foreach(Pusher pusher; stage.pushers) {
 			// Do not draw pushers on exit that aren't the player
 			if(pusher != player && pusher.exit)
 				continue;
 			
-			RenderStates state;
-			state.transform.translate(
-				pusher.position.x * BLOCK_SIZE,
-				pusher.position.y * BLOCK_SIZE
-			);
+			pusherSprite.position = pusher.position * BLOCK_SIZE;
 			
-			auto pusherSprite = playerSprites[pusher.facing];
+			immutable auto spriteKey = getSpriteKey(pusher);
+			pusherSprite.piece = &pusherSpriteMap[spriteKey];
 			
-			renderTarget.draw(pusherSprite, state);
+			renderTarget.draw(pusherSprite);
 		}
 		
 		// Draw walls
 		foreach(Wall wall; stage.walls) {
 			renderWall(wall, renderTarget);
 		}
+	}
+	
+	private int getSpriteKey(Pusher pusher) {
+		int[int] FACING_TO_KEY_TABLE;
+		FACING_TO_KEY_TABLE[Side.Up   ] = PusherMapKeys.PusherUp;
+		FACING_TO_KEY_TABLE[Side.Down ] = PusherMapKeys.PusherDown;
+		FACING_TO_KEY_TABLE[Side.Left ] = PusherMapKeys.PusherLeft;
+		FACING_TO_KEY_TABLE[Side.Right] = PusherMapKeys.PusherRight;
+		
+		return FACING_TO_KEY_TABLE[pusher.facing];
 	}
 	
 	/**
@@ -330,42 +343,6 @@ class PauseMenuScreen : GameScreen {
 	}
 }
 
-private VertexArray[int] setupPlayerSprites() {
-	enum PUSHER_COLOR = Color(32, 255, 32);
-	VertexArray[int] sprites;
-	
-	VertexArray down = new VertexArray(PrimitiveType.Triangles, 3);
-	down[0].position = Vector2f(2, 2);
-	down[1].position = Vector2f(14, 2);
-	down[2].position = Vector2f(8, 12);
-	for(int i=0; i<3; i++) down[i].color = PUSHER_COLOR;
-	
-	VertexArray up = new VertexArray(PrimitiveType.Triangles, 3);
-	up[0].position = Vector2f(2, 14);
-	up[1].position = Vector2f(14, 14);
-	up[2].position = Vector2f(8, 4);
-	for(int i=0; i<3; i++) up[i].color = PUSHER_COLOR;
-	
-	VertexArray right = new VertexArray(PrimitiveType.Triangles, 3);
-	right[0].position = Vector2f(2, 2);
-	right[1].position = Vector2f(2, 14);
-	right[2].position = Vector2f(12, 8);
-	for(int i=0; i<3; i++) right[i].color = PUSHER_COLOR;
-	
-	VertexArray left = new VertexArray(PrimitiveType.Triangles, 3);
-	left[0].position = Vector2f(14, 2);
-	left[1].position = Vector2f(14, 14);
-	left[2].position = Vector2f(4, 8);
-	for(int i=0; i<3; i++) left[i].color = PUSHER_COLOR;
-	
-	sprites[Side.Up] = up;
-	sprites[Side.Down] = down;
-	sprites[Side.Left] = left;
-	sprites[Side.Right] = right;
-	
-	return sprites;
-}
-
 private void changeFacing(ref Side facing, in Point direction) pure {
 	if(direction.x != 0) {
 		if(direction.y != 0 && (facing & Side.Vertical) != 0) {
@@ -445,32 +422,6 @@ private void renderWall(scope Wall wall, scope RenderTarget target) {
 	states.transform.translate(
 		wall.position.x * BLOCK_SIZE,
 		wall.position.y * BLOCK_SIZE
-	);
-	
-	target.draw(vertexArray, states);
-}
-
-private void renderExit(in Exit exit, scope RenderTarget target) {
-	enum exitColor = Color(0, 198, 255);
-	
-	auto vertexArray = new VertexArray(PrimitiveType.Quads, 4);
-	
-	int t, r, b, l;
-	l = t = 0;
-	b = r = BLOCK_SIZE;
-	
-	vertexArray[0].position = Vector2f(l, t);
-	vertexArray[1].position = Vector2f(r, t);
-	vertexArray[2].position = Vector2f(r, b);
-	vertexArray[3].position = Vector2f(l, b);
-	
-	for(int i=0; i < 4; i++)
-		vertexArray[i].color = exitColor;
-	
-	RenderStates states;
-	states.transform.translate(
-		exit.position.x * BLOCK_SIZE,
-		exit.position.y * BLOCK_SIZE
 	);
 	
 	target.draw(vertexArray, states);

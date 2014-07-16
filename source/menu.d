@@ -7,6 +7,7 @@ import game;
 import input;
 import menu;
 import signal;
+import tile;
 import utility;
 
 // Must not forget I got this from of http://tenbytwenty.com/
@@ -19,7 +20,7 @@ enum SELECTOR_X = 16;
 enum SELECTOR_Y = 64;
 
 enum MENU_X = SELECTOR_X + 16;
-enum MENU_Y = SELECTOR_Y - 6;
+enum MENU_Y = SELECTOR_Y - 5;
 
 class MenuContext : Drawable {
 	int selection;
@@ -27,11 +28,16 @@ class MenuContext : Drawable {
 	Menu currentMenu;
 	Font menuFont;
 	
-	Drawable selectorSprite;
+	TileSprite selectorSprite;
 	
 	this(GameAssets assets) {
 		menuFont = assets.menuFont;
-		selectorSprite = assets.sprites[Asset.MenuSelector];
+		
+		selectorSprite = new TileSprite();
+		selectorSprite.texture = &assets.textures[Asset.SymbolTexture];
+		
+		auto symbolMap = assets.maps[Asset.SymbolMap];
+		selectorSprite.piece = &symbolMap[SymbolMapKeys.MenuSelector];
 	}
 	
 	MenuItem[] createMenuItems(string[] strings) {
