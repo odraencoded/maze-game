@@ -13,31 +13,27 @@ import signal;
 import stage;
 import stageobject;
 import utility;
-
-enum BLOCK_SIZE = 16;
+import tile;
 
 enum CAMERA_SPEED = 8; // X BLOCK_SIZE per BLOCK_SIZE of distance per second
 enum CAMERA_CONTROL_FACTOR = 2; // X times as much as above
 
 enum SWITCH_GRIP = false;
 
-enum BACKGROUND_COLOR = Color(96, 96, 96);
+enum BACKGROUND_COLOR = Color(192, 192, 192);
 
 class MazeScreen : GameScreen {
 	Camera camera;
 	Stage stage;
 	Pusher player;
 	
-	VertexArray[int] playerSprites;
-	
 	// Events
 	Signal!(MazeScreen) onStageComplete, onQuit, onRestart;
 	
+	VertexCache[Wall] cachedWallSprites;
+	
 	this(Game game) {
 		super(game);
-		
-		// Setup sprites
-		playerSprites = setupPlayerSprites();
 		
 		// Setup view
 		camera = new Camera();
@@ -49,6 +45,14 @@ class MazeScreen : GameScreen {
 		player = stage.pushers[0];
 		game.subtitle = stage.metadata.title;
 		camera.reset(player.position.toVector2f);
+		
+		// Cache walls
+		auto wallMap = game.assets.maps[Asset.WallMap];
+		cachedWallSprites.clear();
+		foreach(Wall aWall; stage.walls) {
+			
+			cachedWallSprites[aWall] = aWall.createSpriteCache(wallMap);
+		}
 	}
 	
 	override void cycle(in InputState input, in float delta) {
@@ -128,6 +132,8 @@ class MazeScreen : GameScreen {
 	}
 	
 	override void draw(RenderTarget renderTarget, RenderStates states) {
+		import tile;
+		
 		renderTarget.clear(BACKGROUND_COLOR);
 		
 		// Update view
@@ -139,31 +145,45 @@ class MazeScreen : GameScreen {
 		renderTarget.view = new View(viewRect);
 		
 		// Draw exits
+		auto exitSpriteMap = game.assets.maps[Asset.GroundMap];
+		auto exitSprite = new TileSprite();
+		exitSprite.texture = &game.assets.textures[Asset.GroundTexture];
+		exitSprite.piece = &exitSpriteMap[GroundMapKeys.Exit];
 		foreach(Exit exit; stage.exits) {
-			renderExit(exit, renderTarget);
+			exitSprite.position = exit.position * BLOCK_SIZE;
+			renderTarget.draw(exitSprite);
 		}
 		
 		// Draw player
+		auto pusherSpriteMap = game.assets.maps[Asset.PusherMap];
+		auto pusherSprite = new TileSprite();
+		pusherSprite.texture = &game.assets.textures[Asset.PusherTexture];
+		
 		foreach(Pusher pusher; stage.pushers) {
 			// Do not draw pushers on exit that aren't the player
 			if(pusher != player && pusher.exit)
 				continue;
 			
-			RenderStates state;
-			state.transform.translate(
-				pusher.position.x * BLOCK_SIZE,
-				pusher.position.y * BLOCK_SIZE
-			);
+			pusherSprite.position = pusher.position * BLOCK_SIZE;
 			
-			auto pusherSprite = playerSprites[pusher.facing];
+			immutable auto spriteKey = getSpriteKey(pusher);
+			pusherSprite.piece = &pusherSpriteMap[spriteKey];
 			
-			renderTarget.draw(pusherSprite, state);
+			renderTarget.draw(pusherSprite);
 		}
 		
 		// Draw walls
-		foreach(Wall wall; stage.walls) {
-			renderWall(wall, renderTarget);
-		}
+		renderWalls(renderTarget);
+	}
+	
+	private int getSpriteKey(Pusher pusher) {
+		int[int] FACING_TO_KEY_TABLE;
+		FACING_TO_KEY_TABLE[Side.Up   ] = PusherMapKeys.PusherUp;
+		FACING_TO_KEY_TABLE[Side.Down ] = PusherMapKeys.PusherDown;
+		FACING_TO_KEY_TABLE[Side.Left ] = PusherMapKeys.PusherLeft;
+		FACING_TO_KEY_TABLE[Side.Right] = PusherMapKeys.PusherRight;
+		
+		return FACING_TO_KEY_TABLE[pusher.facing];
 	}
 	
 	/**
@@ -266,6 +286,54 @@ class MazeScreen : GameScreen {
 			player = newPlayer;
 		}
 	}
+
+	private void renderWalls(RenderTarget target) {
+		Texture* currentTexture;
+		
+		// Render wall background
+		currentTexture = &game.assets.textures[Asset.WallBackgroundTexture];
+		foreach(Wall aWall, VertexCache aCache; cachedWallSprites) {
+			aCache.position = aWall.position * BLOCK_SIZE;
+			aCache.texture = currentTexture;
+			target.draw(aCache);
+		}
+		
+		// Render wall foregronud
+		currentTexture = &game.assets.textures[Asset.WallForegroundTexture];
+		foreach(Wall aWall, VertexCache aCache; cachedWallSprites) {
+			aCache.texture = currentTexture;
+			target.draw(aCache);
+		}
+		
+		// Render wall outline
+		currentTexture = &game.assets.textures[Asset.WallOutlineTexture];
+		VertexCache[] grabbedWalls;
+		foreach(Wall aWall, VertexCache aCache; cachedWallSprites) {
+			if(aWall.isGrabbable) {
+				aCache.texture = currentTexture;
+				
+				if(aWall.isGrabbed) {
+					grabbedWalls ~= aCache;
+				} else {
+					target.draw(aCache);
+				}
+			}
+		}
+		
+		// Grabbed walls' outlines rendered last so they appear in front
+		// of normal walls outlines.
+		foreach(VertexCache aCache; grabbedWalls) {
+			enum GRABBED_OUTLINE_COLOR = Color(0, 255, 0);
+			enum NORMAL_OUTLINE_COLOR = Color(255, 255, 255);
+			
+			// Set cool outline
+			aCache.setColor(GRABBED_OUTLINE_COLOR);
+			target.draw(aCache);
+			
+			// Unset said cool outline
+			aCache.setColor(NORMAL_OUTLINE_COLOR);
+		}
+	}
 }
 
 /++
@@ -280,7 +348,7 @@ class PauseMenuScreen : GameScreen {
 		
 		// Create the menu
 		this.mazeScreen = screen;
-		menuContext = new MenuContext();
+		menuContext = new MenuContext(game.assets);
 		
 		auto resumeMenuItem = menuContext.createMenuItem("Resume");
 		auto restartMenuItem = menuContext.createMenuItem("Restart");
@@ -330,42 +398,6 @@ class PauseMenuScreen : GameScreen {
 	}
 }
 
-private VertexArray[int] setupPlayerSprites() {
-	enum PUSHER_COLOR = Color(32, 255, 32);
-	VertexArray[int] sprites;
-	
-	VertexArray down = new VertexArray(PrimitiveType.Triangles, 3);
-	down[0].position = Vector2f(2, 2);
-	down[1].position = Vector2f(14, 2);
-	down[2].position = Vector2f(8, 12);
-	for(int i=0; i<3; i++) down[i].color = PUSHER_COLOR;
-	
-	VertexArray up = new VertexArray(PrimitiveType.Triangles, 3);
-	up[0].position = Vector2f(2, 14);
-	up[1].position = Vector2f(14, 14);
-	up[2].position = Vector2f(8, 4);
-	for(int i=0; i<3; i++) up[i].color = PUSHER_COLOR;
-	
-	VertexArray right = new VertexArray(PrimitiveType.Triangles, 3);
-	right[0].position = Vector2f(2, 2);
-	right[1].position = Vector2f(2, 14);
-	right[2].position = Vector2f(12, 8);
-	for(int i=0; i<3; i++) right[i].color = PUSHER_COLOR;
-	
-	VertexArray left = new VertexArray(PrimitiveType.Triangles, 3);
-	left[0].position = Vector2f(14, 2);
-	left[1].position = Vector2f(14, 14);
-	left[2].position = Vector2f(4, 8);
-	for(int i=0; i<3; i++) left[i].color = PUSHER_COLOR;
-	
-	sprites[Side.Up] = up;
-	sprites[Side.Down] = down;
-	sprites[Side.Left] = left;
-	sprites[Side.Right] = right;
-	
-	return sprites;
-}
-
 private void changeFacing(ref Side facing, in Point direction) pure {
 	if(direction.x != 0) {
 		if(direction.y != 0 && (facing & Side.Vertical) != 0) {
@@ -384,94 +416,4 @@ private void changeFacing(ref Side facing, in Point direction) pure {
 		else if(direction.y > 0)
 			facing = Side.Down;
 	}
-}
-
-private void renderWall(scope Wall wall, scope RenderTarget target) {
-	enum GRABBABLE_FILL = Color(0, 0, 0);
-	enum FIXED_FILL = Color(128, 0, 0);
-	enum GRABBABLE_OUTLINE = Color(255, 255, 255);
-	enum GRABBED_OUTLINE = Color(0, 255, 0);
-	enum FIXED_OUTLINE = Color(0, 0, 0);
-	enum INK_WIDTH = 1;
-	
-	const int vertexCount = 8 * wall.blocks.length;
-	auto vertexArray = new VertexArray(PrimitiveType.Quads, vertexCount);
-	
-	int i = 0;
-	foreach(Point block,  Side joints; wall.blocks) {
-		const int fillIndex = i * 8 + 4;
-		const int inkIndex = i * 8;
-		
-		int t, r, b, l;
-		t = block.y * BLOCK_SIZE;
-		r = (block.x + 1) * BLOCK_SIZE;
-		b = (block.y + 1) * BLOCK_SIZE;
-		l = block.x * BLOCK_SIZE;
-		
-		vertexArray[inkIndex + 0].position = Vector2f(l, t);
-		vertexArray[inkIndex + 1].position = Vector2f(r, t);
-		vertexArray[inkIndex + 2].position = Vector2f(r, b);
-		vertexArray[inkIndex + 3].position = Vector2f(l, b);
-		
-		if(!joints.hasFlag(Side.Top   )) t += INK_WIDTH;
-		if(!joints.hasFlag(Side.Right )) r -= INK_WIDTH;
-		if(!joints.hasFlag(Side.Bottom)) b -= INK_WIDTH;
-		if(!joints.hasFlag(Side.Left  )) l += INK_WIDTH;
-		
-		vertexArray[fillIndex + 0].position = Vector2f(l, t);
-		vertexArray[fillIndex + 1].position = Vector2f(r, t);
-		vertexArray[fillIndex + 2].position = Vector2f(r, b);
-		vertexArray[fillIndex + 3].position = Vector2f(l, b);
-		
-		Color fillColor, inkColor;
-		if(wall.isGrabbable) {
-			fillColor = GRABBABLE_FILL;
-			inkColor = wall.isGrabbed ? GRABBED_OUTLINE : GRABBABLE_OUTLINE;
-		} else {
-			fillColor = FIXED_FILL;
-			inkColor = FIXED_OUTLINE;
-		}
-		
-		for(int j = fillIndex; j < fillIndex + 4; j++)
-			vertexArray[j].color = fillColor;
-		
-		for(int j = inkIndex; j < inkIndex + 4; j++)
-			vertexArray[j].color = inkColor;
-		
-		i++;
-	}
-	
-	RenderStates states;
-	states.transform.translate(
-		wall.position.x * BLOCK_SIZE,
-		wall.position.y * BLOCK_SIZE
-	);
-	
-	target.draw(vertexArray, states);
-}
-
-private void renderExit(in Exit exit, scope RenderTarget target) {
-	enum exitColor = Color(0, 198, 255);
-	
-	auto vertexArray = new VertexArray(PrimitiveType.Quads, 4);
-	
-	int t, r, b, l;
-	l = t = 0;
-	b = r = BLOCK_SIZE;
-	
-	vertexArray[0].position = Vector2f(l, t);
-	vertexArray[1].position = Vector2f(r, t);
-	vertexArray[2].position = Vector2f(r, b);
-	vertexArray[3].position = Vector2f(l, b);
-	
-	for(int i=0; i < 4; i++)
-		vertexArray[i].color = exitColor;
-	
-	RenderStates states;
-	states.transform.translate(
-		exit.position.x * BLOCK_SIZE,
-		exit.position.y * BLOCK_SIZE
-	);
-	
-	target.draw(vertexArray, states);
 }

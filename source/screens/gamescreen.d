@@ -1,8 +1,8 @@
 import dsfml.graphics;
 
-import game;
-import input;
-
+public import game : Game;
+public import input;
+public import dsfml.graphics : RenderTarget, RenderStates;
 
 class GameScreen : Drawable {
 	protected Game game;

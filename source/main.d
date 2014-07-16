@@ -1,73 +1,57 @@
-import std.stdio;
-import std.path;
-import core.memory;
+import std.path : slash = dirSeparator;
 
-import dsfml.graphics;
+import dsfml.graphics.color : Color;
+import scaling : ScalingMode;
 
 import game;
-import course;
-import input;
-import screens;
-import view;
-import coursecontext;
 
-alias slash = dirSeparator;
-
-enum GO_UP_KEY          = Keyboard.Key.I;
-enum GO_RIGHT_KEY       = Keyboard.Key.L;
-enum GO_DOWN_KEY        = Keyboard.Key.K;
-enum GO_LEFT_KEY        = Keyboard.Key.J;
-enum CYCLE_PREIVOUS_KEY = Keyboard.Key.Q;
-enum CYCLE_NEXT_KEY     = Keyboard.Key.E;
-enum GRAB_KEY           = Keyboard.Key.D;
-enum CAMERA_KEY         = Keyboard.Key.W;
-enum RESTART_KEY        = Keyboard.Key.R;
+enum GAME_WIDTH = 320;
+enum GAME_HEIGHT = 180;
+enum GAME_FRAMERATE = 30;
+enum GAME_TITLE = "Maze Game";
 
 enum BACKGROUND_COLOR = Color(32, 32, 32, 255);
-
 enum DEFAULT_SCALING_MODE = ScalingMode.PixelPerfect;
 
 void main(string[] args) {
-	Game game = new Game(GAME_TITLE, GAME_WIDTH, GAME_HEIGHT);
+	auto mazeGame = new Game(GAME_TITLE, GAME_WIDTH, GAME_HEIGHT);
 	
 	// Open Window
-	auto window = game.window = setupWindow();
-	game.resizer.scalingMode = DEFAULT_SCALING_MODE;
-	game.resizer.checkSize();
+	auto window = mazeGame.window = setupWindow();
+	mazeGame.resizer.scalingMode = DEFAULT_SCALING_MODE;
+	mazeGame.resizer.checkSize();
+	
+	loadAssets(mazeGame);
 	
 	// Setup input
-	InputState input = new InputState;
-	input.bind(GO_UP_KEY         , Command.GoUp          );
-	input.bind(GO_RIGHT_KEY      , Command.GoRight       );
-	input.bind(GO_DOWN_KEY       , Command.GoDown        );
-	input.bind(GO_LEFT_KEY       , Command.GoLeft        );
-	input.bind(CYCLE_PREIVOUS_KEY, Command.CyclePrevious );
-	input.bind(CYCLE_NEXT_KEY    , Command.CycleNext     );
-	input.bind(GRAB_KEY          , Command.Grab          );
-	input.bind(CAMERA_KEY        , Command.Camera        );
-	input.bind(RESTART_KEY       , Command.Restart       );
+	auto input = setupInput();
 	
 	// Setup screen
 	// If a directory is passed in the arguments we load it directly
+	import menuscreen : MenuScreen;
+	auto goToMenu = { mazeGame.nextScreen = new MenuScreen(mazeGame); };
 	if(args.length > 1) {
+		import coursecontext;
+		import course : loadCourse;
+		Game realGame = mazeGame;
 		auto course = loadCourse(args[1]);
-		auto context = new CourseContext(game, course);
+		auto context = new CourseContext(realGame , course);
 		
 		context.startPlaying();
 		
-		auto openMenuScreen = { game.nextScreen = new MenuScreen(game); };
+		auto openMenuScreen = goToMenu;
 		context.onGameQuit ~= openMenuScreen;
 		context.onCourseComplete ~= openMenuScreen;
 	} else {
-		game.nextScreen = new MenuScreen(game);
+		goToMenu();
 	}
 	
 	// Switch screens
-	game.currentScreen = game.nextScreen;
-	game.nextScreen = null;
+	mazeGame.currentScreen = mazeGame.nextScreen;
+	mazeGame.nextScreen = null;
 	
 	// Main loop
-	game.isRunning = true;
+	mazeGame.isRunning = true;
 	while(true) {
 		// Fixed delta
 		enum frameDelta = 1.0 / GAME_FRAMERATE;
@@ -75,29 +59,30 @@ void main(string[] args) {
 		// Checking events
 		input.prepareCycle();
 		
+		import dsfml.window.event : Event;
 		Event event;
 		while(window.pollEvent(event)) {
 			switch(event.type) {
 				// Close window
-				case(event.EventType.Closed):
+				case(Event.EventType.Closed):
 					input.close = true;
 					break;
 				
 				// Resize view
-				case(event.EventType.Resized):
-					game.resizer.checkSize();
+				case(Event.EventType.Resized):
+					mazeGame.resizer.checkSize();
 					break;
 				
 				// Register input
-				case(event.EventType.KeyPressed):
+				case(Event.EventType.KeyPressed):
 					input.pressKey(event.key.code);
 					break;
 				
-				case(event.EventType.KeyReleased):
+				case(Event.EventType.KeyReleased):
 					input.releaseKey(event.key.code);
 					break;
 				
-				case(event.EventType.LostFocus):
+				case(Event.EventType.LostFocus):
 					input.lostFocus = true;
 					break;
 				
@@ -111,47 +96,142 @@ void main(string[] args) {
 			window.close();
 		
 		// Logic part of the logic/draw cycle
-		game.currentScreen.cycle(input, frameDelta);
+		mazeGame.currentScreen.cycle(input, frameDelta);
 		
 		// Exiting loop
-		game.isRunning = game.isRunning && window.isOpen();
-		if(!game.isRunning)
+		mazeGame.isRunning = mazeGame.isRunning && window.isOpen();
+		if(!mazeGame.isRunning)
 			break;
 		
 		// Drawing part
-		auto buffer = game.buffer;
+		auto buffer = mazeGame.buffer;
 		buffer.clear(BACKGROUND_COLOR);
 		
 		// Update view
-		buffer.view = game.view;
+		buffer.view = mazeGame.view;
 		
 		// Draw screen
-		buffer.draw(game.currentScreen);
+		buffer.draw(mazeGame.currentScreen);
 		
 		// Flip
 		buffer.display();
 		
 		// Not even bothering clearing the window since buffer should cover it
-		window.draw(game.resizer);
+		window.draw(mazeGame.resizer);
 		window.display();
 		
 		// Changing screens
-		if(game.nextScreen) {
-			game.currentScreen = game.nextScreen;
-			game.nextScreen = null;
+		if(mazeGame.nextScreen) {
+			mazeGame.currentScreen = mazeGame.nextScreen;
+			mazeGame.nextScreen = null;
 			
 			// Reset input so that it's not carried on to the next screen
 			input.reset();
 		}
 		
 		// Cleaning up the trash
+		import core.memory : GC;
 		GC.collect();
 	}
 }
 
-private RenderWindow setupWindow() {
+private auto setupWindow() {
+	import dsfml.graphics : VideoMode, RenderWindow;
+	
 	auto videoMode = VideoMode(GAME_WIDTH, GAME_HEIGHT);
 	auto window = new RenderWindow(videoMode, GAME_TITLE);
 	window.setFramerateLimit(GAME_FRAMERATE);
 	return window;
+}
+
+private auto setupInput() {
+	import input;
+	import dsfml.window : Keyboard;
+	
+	auto result = new InputState();
+	
+	// TODO: Replace this by something that loads bindings from a file.
+	result.bind(Keyboard.Key.I, Command.GoUp         );
+	result.bind(Keyboard.Key.L, Command.GoRight      );
+	result.bind(Keyboard.Key.K, Command.GoDown       );
+	result.bind(Keyboard.Key.J, Command.GoLeft       );
+	result.bind(Keyboard.Key.Q, Command.CyclePrevious);
+	result.bind(Keyboard.Key.E, Command.CycleNext    );
+	result.bind(Keyboard.Key.D, Command.Grab         );
+	result.bind(Keyboard.Key.W, Command.Camera       );
+	result.bind(Keyboard.Key.R, Command.Restart      );
+	
+	return result;
+}
+
+private void loadAssets(Game mazeGame) {
+	import dsfml.graphics;
+	
+	import tile;
+	
+	enum ASSETS_DIRECTORY = "assets" ~ slash;
+	enum SPRITES_DIRECTORY = ASSETS_DIRECTORY ~ "sprites" ~ slash;
+	enum MENU_FONT_FILENAME = "assets" ~ slash ~ "text" ~ slash ~ "Munro.ttf";
+	
+	auto assets = mazeGame.assets;
+	
+	auto menuFont = assets.menuFont = new Font();
+	menuFont.loadFromFile(MENU_FONT_FILENAME);
+	
+	// Other sprites
+	{
+		import geometry : Point;
+		
+		// Load textures
+		string[Asset] texturePaths;
+		texturePaths[Asset.PusherTexture] = SPRITES_DIRECTORY ~ "pusher.png";
+		texturePaths[Asset.GroundTexture] = SPRITES_DIRECTORY ~ "ground.png";
+		texturePaths[Asset.WallBackgroundTexture] = SPRITES_DIRECTORY ~ "wall-background.png";
+		texturePaths[Asset.WallForegroundTexture] = SPRITES_DIRECTORY ~ "wall-foreground.png";
+		texturePaths[Asset.WallOutlineTexture] = SPRITES_DIRECTORY ~ "wall-outline.png";
+		texturePaths[Asset.SymbolTexture] = SPRITES_DIRECTORY ~ "symbol.png";
+		
+		foreach(Asset aKey, string aTexturePath; texturePaths) {
+			auto newTexture = new Texture();
+			newTexture.loadFromFile(aTexturePath);
+			assets.textures[aKey] = newTexture;
+		}
+		
+		// Pusher sprite map
+		auto pusherMap = new TextureMap(Point(16, 16));
+		assets.maps[Asset.PusherMap] = pusherMap;
+		
+		pusherMap.addPiece(PusherMapKeys.PusherDown , Point(0, 0));
+		pusherMap.addPiece(PusherMapKeys.PusherLeft , Point(0, 1));
+		pusherMap.addPiece(PusherMapKeys.PusherRight, Point(0, 2));
+		pusherMap.addPiece(PusherMapKeys.PusherUp   , Point(0, 3));
+		
+		// Ground sprite map
+		auto groundMap = new TextureMap(Point(16, 16));
+		assets.maps[Asset.GroundMap] = groundMap;
+		
+		immutable auto exitSpan = IntRect(0, 0, 3, 3);
+		immutable auto exitOrigin = Vector2f(1, 1);
+		groundMap.addPiece(GroundMapKeys.Exit, exitSpan, exitOrigin);
+		
+		// Wall sprite map
+		auto wallMap = new TextureMap(Point(8, 8));
+		assets.maps[Asset.WallMap] = wallMap;
+		
+		wallMap.addPiece(WallMapKeys.TopLeftSide    , IntRect(0, 0, 2, 2), Vector2f(1, 1));
+		wallMap.addPiece(WallMapKeys.TopSide        , IntRect(2, 0, 1, 2), Vector2f(0, 1));
+		wallMap.addPiece(WallMapKeys.TopRightSide   , IntRect(3, 0, 2, 2), Vector2f(0, 1));
+		wallMap.addPiece(WallMapKeys.RightSide      , IntRect(3, 2, 2, 1), Vector2f(0, 0));
+		wallMap.addPiece(WallMapKeys.BottomRightSide, IntRect(3, 3, 2, 2), Vector2f(0, 0));
+		wallMap.addPiece(WallMapKeys.BottomSide     , IntRect(2, 3, 1, 2), Vector2f(0, 0));
+		wallMap.addPiece(WallMapKeys.BottomLeftSide , IntRect(0, 3, 2, 2), Vector2f(1, 0));
+		wallMap.addPiece(WallMapKeys.LeftSide       , IntRect(0, 2, 2, 1), Vector2f(1, 0));
+		wallMap.addPiece(WallMapKeys.Fill           , IntRect(9, 0, 2, 2), Vector2f(0, 0));
+		
+		// Symbol sprite map
+		auto symbolMap = new TextureMap(Point(16, 16));
+		assets.maps[Asset.SymbolMap] = symbolMap;
+		
+		symbolMap.addPiece(SymbolMapKeys.MenuSelector , Point(0, 0));
+	}
 }

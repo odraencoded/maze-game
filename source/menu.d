@@ -7,10 +7,10 @@ import game;
 import input;
 import menu;
 import signal;
+import tile;
 import utility;
 
 // Must not forget I got this from of http://tenbytwenty.com/
-enum MENU_FONT_FILENAME = "assets" ~ slash ~ "text" ~ slash ~ "Munro.ttf";
 enum MENU_TEXT_SIZE = 20;
 enum MENU_TEXT_COLOR = Color.White;
 
@@ -20,7 +20,7 @@ enum SELECTOR_X = 16;
 enum SELECTOR_Y = 64;
 
 enum MENU_X = SELECTOR_X + 16;
-enum MENU_Y = SELECTOR_Y - 6;
+enum MENU_Y = SELECTOR_Y - 5;
 
 class MenuContext : Drawable {
 	int selection;
@@ -28,13 +28,16 @@ class MenuContext : Drawable {
 	Menu currentMenu;
 	Font menuFont;
 	
-	Drawable selectorSprite;
+	TileSprite selectorSprite;
 	
-	this() {
-		menuFont = new Font();
-		menuFont.loadFromFile(MENU_FONT_FILENAME);
+	this(GameAssets assets) {
+		menuFont = assets.menuFont;
 		
-		selectorSprite = setupSelectorSprite();
+		selectorSprite = new TileSprite();
+		selectorSprite.texture = &assets.textures[Asset.SymbolTexture];
+		
+		auto symbolMap = assets.maps[Asset.SymbolMap];
+		selectorSprite.piece = &symbolMap[SymbolMapKeys.MenuSelector];
 	}
 	
 	MenuItem[] createMenuItems(string[] strings) {
@@ -122,13 +125,4 @@ class Menu {
 class MenuItem {
 	Text text;
 	Signal!(MenuItem) onActivate;
-}
-
-private auto setupSelectorSprite() {
-	VertexArray selector = new VertexArray(PrimitiveType.Triangles, 3);
-	selector[0].position = Vector2f(2, 2);
-	selector[1].position = Vector2f(2, 14);
-	selector[2].position = Vector2f(12, 8);
-	for(int i=0; i<3; i++) selector[i].color = Color.White;
-	return selector;
 }

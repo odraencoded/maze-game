@@ -1,8 +1,10 @@
 import std.algorithm;
 import std.range;
 
+import game;
 import geometry;
 import stage;
+import tile;
 
 /++
  + Base class for objects in a stage.
@@ -223,8 +225,86 @@ class Wall : SimpleStageObject {
 		}
 		return blockPoints;
 	}
+	
+	VertexCache createSpriteCache(TextureMap wallMap) {
+		import dsfml.system.vector2;
+		
+		enum CORNER_SIZE = BLOCK_SIZE / 2;
+		
+		// Caching the tiles used in a wall
+		auto wallCache = new VertexCache();
+		foreach(Point block,  Side joints; blocks) {
+			immutable auto blockPosition = block * BLOCK_SIZE;
+			
+			// Cache fill tile
+			Vector2i tilePosition = blockPosition;
+			auto tileVertices = &wallMap[WallMapKeys.Fill].vertices;
+			wallCache.add(*tileVertices, tilePosition);
+			
+			// Iterate through the four corners
+			foreach(int i; 0..4) {
+				auto mapKey = (joints & CORNER_FILTERS[i]) in CORNER_MAP[i];
+				if(!mapKey)
+					continue;
+				
+				// Cache corner tile
+				tilePosition = blockPosition + CORNER_OFFSETS[i] * CORNER_SIZE;
+				tileVertices = &wallMap[*mapKey].vertices;
+				wallCache.add(*tileVertices, tilePosition);
+			}
+		}
+		
+		return wallCache;
+	}
+	
+	// Corner constants, used to cache the wall
+	private static immutable auto CORNER_FILTERS = [
+		Side.Top    | Side.Left ,
+		Side.Top    | Side.Right,
+		Side.Bottom | Side.Right,
+		Side.Bottom | Side.Left ,
+	];
+	
+	private static immutable auto CORNER_OFFSETS = [
+		Point(0, 0), Point(1, 0), Point(1, 1), Point(0, 1)
+	];
+	
+	private static immutable int[int][4] CORNER_MAP;
+	private static immutable int[int] TOP_LEFT_CORNER_MAP;
+	private static immutable int[int] TOP_RIGHT_CORNER_MAP;
+	private static immutable int[int] BOTTOM_RIGHT_CORNER_MAP;
+	private static immutable int[int] BOTTOM_LEFT_CORNER_MAP;
+	
+	
+	static this() {
+		import std.stdio;
+		writeln(CORNER_MAP[0]);
+		writeln(WallMapKeys.TopLeftSide);
+		
+		TOP_LEFT_CORNER_MAP[Side.None  ] = WallMapKeys.TopLeftSide;
+		TOP_LEFT_CORNER_MAP[Side.Top   ] = WallMapKeys.LeftSide;
+		TOP_LEFT_CORNER_MAP[Side.Left  ] = WallMapKeys.TopSide;
+		
+		TOP_RIGHT_CORNER_MAP[Side.None  ] = WallMapKeys.TopRightSide;
+		TOP_RIGHT_CORNER_MAP[Side.Top   ] = WallMapKeys.RightSide;
+		TOP_RIGHT_CORNER_MAP[Side.Right ] = WallMapKeys.TopSide;
+		
+		BOTTOM_RIGHT_CORNER_MAP[Side.None  ] = WallMapKeys.BottomRightSide;
+		BOTTOM_RIGHT_CORNER_MAP[Side.Bottom] = WallMapKeys.RightSide;
+		BOTTOM_RIGHT_CORNER_MAP[Side.Right ] = WallMapKeys.BottomSide;
+		
+		BOTTOM_LEFT_CORNER_MAP[Side.None  ] = WallMapKeys.BottomLeftSide;
+		BOTTOM_LEFT_CORNER_MAP[Side.Bottom] = WallMapKeys.LeftSide;
+		BOTTOM_LEFT_CORNER_MAP[Side.Left  ] = WallMapKeys.BottomSide;
+		
+		CORNER_MAP[0] = TOP_LEFT_CORNER_MAP;
+		CORNER_MAP[1] = TOP_RIGHT_CORNER_MAP;
+		CORNER_MAP[2] = BOTTOM_RIGHT_CORNER_MAP;
+		CORNER_MAP[3] = BOTTOM_LEFT_CORNER_MAP;
+	}
 }
 
 class Exit {
 	Point position;
 }
+
