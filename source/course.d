@@ -318,7 +318,7 @@ CourseInfo loadCourseInfo(in string path) {
 	auto json = parseJSON(readText(path));
 	JSONValue[string] root;
 	
-	if(json.getJsonValue(root)) {
+	if(getJsonValue(json, root)) {
 		root.getJsonValue("title", result.title);
 		root.getJsonValues("authors", result.authors);
 		root.getJsonValue("url", result.url);

@@ -1,8 +1,10 @@
 import std.algorithm;
+import std.conv;
 import std.range;
 
 import game;
 import geometry;
+import json;
 import stage;
 import tile;
 
@@ -10,6 +12,12 @@ import tile;
  + Base class for objects in a stage.
  +/
 interface StageObject {
+	/++
+	 + Serializes this object into a JSON value
+	 +/
+	JSONValue serialize() const;
+	
+	
 	/++
 	 + Returns the points where this object is.
 	 +/
@@ -203,6 +211,30 @@ class Pusher : SimpleStageObject  {
 		
 		return result;
 	}
+	
+	JSONValue serialize() const {
+		JSONValue data = JSONValue(new JSONValue[2]);
+		
+		data[0] = [position.x, position.y];
+		data[1] = facing;
+		
+		return data;
+	}
+	
+	static Pusher load(JSONValue json) {
+		auto result = new Pusher();
+		
+		JSONValue[] someData;
+		json.getJsonValue(someData);
+		ulong facing;
+		
+		getJsonValue(someData[0], result.position);
+		getJsonValue(someData[1], facing);
+		
+		result.facing = facing.to!Side;
+		
+		return result;
+	}
 }
 
 class Wall : SimpleStageObject {
@@ -224,6 +256,49 @@ class Wall : SimpleStageObject {
 			}
 		}
 		return blockPoints;
+	}
+	
+	JSONValue serialize() const {
+		JSONValue data = JSONValue(new JSONValue[3]);
+		
+		data[0] = [position.x, position.y];
+		data[1] = grabbable;
+		
+		// Serialize blocks
+		JSONValue[] serializedBlocks;
+		foreach(Point block, Side joints; blocks) {
+			JSONValue serializedPoint = [block.x, block.y];
+			JSONValue serializedJoints = joints;
+			serializedBlocks ~= JSONValue([serializedPoint, serializedJoints]);
+		}
+		data[2] = serializedBlocks;
+		
+		return data;
+	}
+	
+	
+	static Wall load(JSONValue json) {
+		auto result = new Wall();
+		
+		JSONValue[] someData;
+		json.getJsonValue(someData);
+		
+		getJsonValue(someData[0], result.position);
+		getJsonValue(someData[1], result.grabbable);
+		
+		JSONValue[] serializedBlocks;
+		someData[2].getJsonValue(serializedBlocks);
+		
+		foreach(JSONValue aSerializedBlock; serializedBlocks) {
+			Point block;
+			ulong joints;
+			getJsonValue(aSerializedBlock[0], block);
+			getJsonValue(aSerializedBlock[1], joints);
+			
+			result.blocks[block] = cast(Side)joints;
+		}
+		
+		return result;
 	}
 	
 	/++
@@ -307,8 +382,6 @@ class Wall : SimpleStageObject {
 	
 	static this() {
 		import std.stdio;
-		writeln(CORNER_MAP[0]);
-		writeln(WallMapKeys.TopLeftSide);
 		
 		TOP_LEFT_CORNER_MAP[Side.None  ] = WallMapKeys.TopLeftSide;
 		TOP_LEFT_CORNER_MAP[Side.Top   ] = WallMapKeys.LeftSide;
@@ -335,5 +408,17 @@ class Wall : SimpleStageObject {
 
 class Exit {
 	Point position;
+	
+	JSONValue serialize() const {
+		return JSONValue([position.x, position.y]);
+	}
+	
+	static Exit load(JSONValue someData) {
+		auto result = new Exit();
+		
+		someData.getJsonValue(result.position);
+		
+		return result;
+	}
 }
 

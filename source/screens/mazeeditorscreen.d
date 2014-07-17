@@ -1,3 +1,6 @@
+import std.json;
+import std.path : slash = dirSeparator;
+
 import dsfml.graphics;
 
 import game;
@@ -8,6 +11,8 @@ import menu;
 import signal;
 import stage;
 import stageobject;
+
+enum EDITOR_DIRECTORY = "editor" ~ slash;
 
 class MazeEditorScreen : GameScreen {
 	Stage stage;
@@ -22,20 +27,22 @@ class MazeEditorScreen : GameScreen {
 	/++
 	 + Sets a stage to be edited in the editor.
 	 +/
-	void setStage(Stage stage, StageInfo metadata) {
-		this.stage = stage;
-		this.stageMetadata = metadata;
+	void setStage(Stage newStage, StageInfo newMetadata) {
+		stage = newStage;
+		stageMetadata = newMetadata;
+		stage.metadata = &stageMetadata;
 	}
 	
 	/++
 	 + Starts editing a new clean stage.
 	 +/
-	void newStage() {
+	void setNewStage() {
 		auto newMetadata = new StageInfo();
 		newMetadata.title = "New Stage";
 		
 		// Create default stage
 		auto newStage = new Stage();
+		newStage.metadata = &newMetadata;
 		
 		// Add a default pusher
 		auto defaultPusher = new Pusher();
@@ -65,18 +72,30 @@ class MazeEditorScreen : GameScreen {
 	}
 	
 	/++
+	 + Saves the stage.
+	 +/
+	void saveStage() {
+		import std.file;
+		
+		auto stageRoot = stage.serialize();
+		auto fileData = stageRoot.toJSON();
+		
+		mkdirRecurse(EDITOR_DIRECTORY);
+		write(EDITOR_DIRECTORY ~ "stage.maze", fileData);
+	}
+	
+	/++
 	 + Tests the current stage
 	 +/
 	void testStage() {
 		// Create a copy to test on
-		// TODO: Implement cloning
-		auto stageCopy = this.stage;
-		stageCopy.metadata = &this.stageMetadata;
+		auto stageCopy = stage.clone();
 		
 		// Set up the maze screen to play the stage
 		auto mazeScreen = new MazeScreen(game);
 		mazeScreen.setStage(stageCopy);
 		mazeScreen.onQuit ~= { game.nextScreen = this; };
+		mazeScreen.onRestart ~= { mazeScreen.setStage(this.stage.clone()); };
 		game.nextScreen = mazeScreen;
 	}
 	
@@ -124,13 +143,18 @@ class MazeEditorSettingsScreen : GameScreen {
 			// Test stage
 			auto testMenuItem = menuContext.createMenuItem("Test Stage");
 			testMenuItem.onActivate ~= { editorScreen.testStage(); };
-			mainMenu.items ~= [closeMenuItem, testMenuItem];
+			
+			// Save stage
+			auto saveMenuItem = menuContext.createMenuItem("Save Stage");
+			saveMenuItem.onActivate ~= { editorScreen.saveStage(); };
+			
+			mainMenu.items ~= [closeMenuItem, testMenuItem, saveMenuItem];
 		}
 		
 		// New stage item
 		auto newStageMenuItem = menuContext.createMenuItem("New Stage");
 		newStageMenuItem.onActivate ~= {
-			editorScreen.newStage();
+			editorScreen.setNewStage();
 			game.nextScreen = editorScreen;
 		};
 		mainMenu.items ~= newStageMenuItem;
