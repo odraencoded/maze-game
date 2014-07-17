@@ -226,7 +226,36 @@ class Wall : SimpleStageObject {
 		return blockPoints;
 	}
 	
-	VertexCache createSpriteCache(TextureMap wallMap) {
+	/++
+	 + Adds a block to the wall attaching the surrounding blocks to it
+	 +/
+	void glueBlock(in Point point) {
+		import utility;
+		
+		// Make sure blocks[point] exists.
+		auto newBlockSides = point in blocks;
+		if(newBlockSides is null) {
+			blocks[point] = Side.None;
+			newBlockSides = &blocks[point];
+		}
+		
+		// Search around point for this wall's blocks
+		foreach(Side aSide; Side.All.getFlags()) {
+			auto offset = aSide.getOffset();
+			auto otherBlockSides = (point + offset) in blocks;
+			if(otherBlockSides) {
+				// Add aSide to this block and
+				// its opposite to the other block
+				*newBlockSides |= aSide;
+				*otherBlockSides |= aSide.getOpposite();
+			}
+		}
+		
+		// Invalidate blockPoints
+		blockPoints = null;
+	}
+	
+	VertexCache createSpriteCache(in TextureMap wallMap) {
 		import dsfml.system.vector2;
 		
 		enum CORNER_SIZE = BLOCK_SIZE / 2;

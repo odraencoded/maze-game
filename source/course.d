@@ -39,8 +39,9 @@ class Course {
 	 * Creates the selected stage and returns it.
 	 */
 	Stage buildStage(int index) const {
-		auto aStageGen = stages[index].generator;
-		auto stage = aStageGen.buildStage(this.stages[index].metadata);
+		auto stageEntry = stages[index];
+		auto stage = stageEntry.generator.buildStage();
+		stage.metadata = &stageEntry.metadata;
 		return stage;
 	}
 }
@@ -167,7 +168,7 @@ Course[] loadCourses(in string directory) {
  * Generates a stage. Duh.
  */
 interface StageGenerator {
-	Stage buildStage(in StageInfo metadata) const;
+	Stage buildStage() const;
 }
 
 /**
@@ -180,15 +181,15 @@ class BitmapStageLoader : StageGenerator {
 		this.path = path;
 	}
 	
-	Stage buildStage(in StageInfo metadata) const {
-		return loadBitmapStage(path, metadata);
+	Stage buildStage() const {
+		return loadBitmapStage(path);
 	}
 }
 
 /**
  * Parses a bitmap file into a stage.
  */
-public Stage loadBitmapStage(in string path, in StageInfo metadata) {
+public Stage loadBitmapStage(in string path) {
 	enum BITMAP_STAGE_OPEN_ERROR_MESSAGE = "Couldn't open bitmap stage file";
 	
 	// Load stage bitmap from file
@@ -196,16 +197,16 @@ public Stage loadBitmapStage(in string path, in StageInfo metadata) {
 	if(!bitmap.loadFromFile(path))
 		throw new Exception(BITMAP_STAGE_OPEN_ERROR_MESSAGE);
 	
-	return loadBitmapStage(bitmap, metadata);
+	return loadBitmapStage(bitmap);
 }
 
-public Stage loadBitmapStage(scope Image bitmap, in StageInfo metadata) {
+public Stage loadBitmapStage(scope Image bitmap) {
 	auto size = bitmap.getSize();
 	Box bitmapFrame = {0, 0, size.x, size.y};
 	Box stageFrame = {0, 0, (size.x + 1) / 2, (size.y + 1) / 2};
 	bool[Point] checkedPoints;
 	
-	auto newStage = new Stage(metadata);
+	auto newStage = new Stage();
 	
 	for(uint i=0; i < stageFrame.area; i++) {
 		uint x = i % stageFrame.width * 2;

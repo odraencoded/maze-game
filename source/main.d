@@ -122,11 +122,23 @@ void main(string[] args) {
 		
 		// Changing screens
 		if(mazeGame.nextScreen) {
-			mazeGame.currentScreen = mazeGame.nextScreen;
-			mazeGame.nextScreen = null;
+			mazeGame.currentScreen.disappear();
 			
-			// Reset input so that it's not carried on to the next screen
-			input.reset();
+			// In case .disappear() forces the screen to remain the same
+			if(mazeGame.nextScreen != mazeGame.currentScreen) {
+				import gamescreen : GameScreen;
+				GameScreen nextScreen;
+				do {
+					nextScreen = mazeGame.nextScreen;
+					nextScreen.appear();
+				} while(nextScreen != mazeGame.nextScreen);
+				
+				mazeGame.currentScreen = mazeGame.nextScreen;
+				mazeGame.nextScreen = null;
+				
+				// Reset input so that it's not carried on to the next screen
+				input.reset();
+			}
 		}
 		
 		// Cleaning up the trash

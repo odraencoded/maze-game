@@ -62,6 +62,9 @@ enum Side : ubyte {
 	
 	Vertical = Top | Bottom,
 	Horizontal = Left | Right,
+	Diagonal = TopRight | TopLeft | BottomRight | BottomLeft,
+	
+	All = Vertical | Horizontal | Diagonal,
 }
 
 /**
@@ -106,6 +109,7 @@ pure struct Box {
 public immutable Side[] CrossSides = [
 	Side.Top, Side.Right, Side.Bottom, Side.Left
 ];
+
 private immutable Side[Point] DIRECTION_TABLE;
 private immutable Point[int] OFFSET_TABLE;
 

@@ -7,7 +7,7 @@ import geometry;
 import stageobject;
 
 class Stage {
-	const StageInfo metadata;
+	const(StageInfo)* metadata;
 	
 	Pusher[] pushers;
 	Wall[] walls;
@@ -15,10 +15,6 @@ class Stage {
 	
 	auto getObjects() {
 		return chain(pushers, walls);
-	}
-	
-	this(in StageInfo metadata) {
-		this.metadata = metadata;
 	}
 	
 	Exit getExit(in Point point) pure {
