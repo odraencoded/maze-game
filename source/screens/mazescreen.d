@@ -12,6 +12,7 @@ import menuscreen;
 import signal;
 import stage;
 import stageobject;
+import stagerenderer;
 import utility;
 import tile;
 
@@ -30,7 +31,7 @@ class MazeScreen : GameScreen {
 	// Events
 	Signal!(MazeScreen) onStageComplete, onQuit, onRestart;
 	
-	VertexCache[Wall] cachedWallSprites;
+	MazeScreenStageRenderer stageRenderer;
 	
 	this(Game game) {
 		super(game);
@@ -38,6 +39,8 @@ class MazeScreen : GameScreen {
 		// Setup view
 		camera = new Camera();
 		camera.speed = CAMERA_SPEED;
+		
+		stageRenderer = new MazeScreenStageRenderer(game.assets, this);
 	}
 	
 	void setStage(Stage stage) {
@@ -46,13 +49,7 @@ class MazeScreen : GameScreen {
 		game.subtitle = stage.metadata.title;
 		camera.reset(player.position.toVector2f);
 		
-		// Cache walls
-		auto wallMap = game.assets.maps[Asset.WallMap];
-		cachedWallSprites.clear();
-		foreach(Wall aWall; stage.walls) {
-			
-			cachedWallSprites[aWall] = aWall.createSpriteCache(wallMap);
-		}
+		stageRenderer.setStage(stage);
 	}
 	
 	override void cycle(in InputState input, in float delta) {
@@ -144,46 +141,7 @@ class MazeScreen : GameScreen {
 		auto viewRect = FloatRect(viewTopLeft, gameSize);
 		renderTarget.view = new View(viewRect);
 		
-		// Draw exits
-		auto exitSpriteMap = game.assets.maps[Asset.GroundMap];
-		auto exitSprite = new TileSprite();
-		exitSprite.texture = &game.assets.textures[Asset.GroundTexture];
-		exitSprite.piece = &exitSpriteMap[GroundMapKeys.Exit];
-		foreach(Exit exit; stage.exits) {
-			exitSprite.position = exit.position * BLOCK_SIZE;
-			renderTarget.draw(exitSprite);
-		}
-		
-		// Draw player
-		auto pusherSpriteMap = game.assets.maps[Asset.PusherMap];
-		auto pusherSprite = new TileSprite();
-		pusherSprite.texture = &game.assets.textures[Asset.PusherTexture];
-		
-		foreach(Pusher pusher; stage.pushers) {
-			// Do not draw pushers on exit that aren't the player
-			if(pusher != player && pusher.exit)
-				continue;
-			
-			pusherSprite.position = pusher.position * BLOCK_SIZE;
-			
-			immutable auto spriteKey = getSpriteKey(pusher);
-			pusherSprite.piece = &pusherSpriteMap[spriteKey];
-			
-			renderTarget.draw(pusherSprite);
-		}
-		
-		// Draw walls
-		renderWalls(renderTarget);
-	}
-	
-	private int getSpriteKey(Pusher pusher) {
-		int[int] FACING_TO_KEY_TABLE;
-		FACING_TO_KEY_TABLE[Side.Up   ] = PusherMapKeys.PusherUp;
-		FACING_TO_KEY_TABLE[Side.Down ] = PusherMapKeys.PusherDown;
-		FACING_TO_KEY_TABLE[Side.Left ] = PusherMapKeys.PusherLeft;
-		FACING_TO_KEY_TABLE[Side.Right] = PusherMapKeys.PusherRight;
-		
-		return FACING_TO_KEY_TABLE[pusher.facing];
+		renderTarget.draw(stageRenderer);
 	}
 	
 	/**
@@ -284,54 +242,6 @@ class MazeScreen : GameScreen {
 				newPlayer.obstacle = true;
 			}
 			player = newPlayer;
-		}
-	}
-
-	private void renderWalls(RenderTarget target) {
-		Texture* currentTexture;
-		
-		// Render wall background
-		currentTexture = &game.assets.textures[Asset.WallBackgroundTexture];
-		foreach(Wall aWall, VertexCache aCache; cachedWallSprites) {
-			aCache.position = aWall.position * BLOCK_SIZE;
-			aCache.texture = currentTexture;
-			target.draw(aCache);
-		}
-		
-		// Render wall foregronud
-		currentTexture = &game.assets.textures[Asset.WallForegroundTexture];
-		foreach(Wall aWall, VertexCache aCache; cachedWallSprites) {
-			aCache.texture = currentTexture;
-			target.draw(aCache);
-		}
-		
-		// Render wall outline
-		currentTexture = &game.assets.textures[Asset.WallOutlineTexture];
-		VertexCache[] grabbedWalls;
-		foreach(Wall aWall, VertexCache aCache; cachedWallSprites) {
-			if(aWall.isGrabbable) {
-				aCache.texture = currentTexture;
-				
-				if(aWall.isGrabbed) {
-					grabbedWalls ~= aCache;
-				} else {
-					target.draw(aCache);
-				}
-			}
-		}
-		
-		// Grabbed walls' outlines rendered last so they appear in front
-		// of normal walls outlines.
-		foreach(VertexCache aCache; grabbedWalls) {
-			enum GRABBED_OUTLINE_COLOR = Color(0, 255, 0);
-			enum NORMAL_OUTLINE_COLOR = Color(255, 255, 255);
-			
-			// Set cool outline
-			aCache.setColor(GRABBED_OUTLINE_COLOR);
-			target.draw(aCache);
-			
-			// Unset said cool outline
-			aCache.setColor(NORMAL_OUTLINE_COLOR);
 		}
 	}
 }

@@ -11,6 +11,7 @@ import menu;
 import signal;
 import stage;
 import stageobject;
+import stagerenderer;
 
 enum EDITOR_DIRECTORY = "editor" ~ slash;
 
@@ -19,9 +20,12 @@ class MazeEditorScreen : GameScreen {
 	StageInfo stageMetadata;
 	
 	Signal!(MazeEditorScreen) onQuit;
+	StageRenderer stageRenderer;
 	
 	this(Game game) {
 		super(game);
+		
+		stageRenderer = new StageRenderer(game.assets);
 	}
 	
 	/++
@@ -31,6 +35,8 @@ class MazeEditorScreen : GameScreen {
 		stage = newStage;
 		stageMetadata = newMetadata;
 		stage.metadata = &stageMetadata;
+		
+		stageRenderer.setStage(stage);
 	}
 	
 	/++
@@ -116,7 +122,7 @@ class MazeEditorScreen : GameScreen {
 	}
 	
 	override void draw(RenderTarget renderTarget, RenderStates states) {
-		
+		renderTarget.draw(stageRenderer);
 	}
 }
 

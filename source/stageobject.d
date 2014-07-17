@@ -17,7 +17,6 @@ interface StageObject {
 	 +/
 	JSONValue serialize() const;
 	
-	
 	/++
 	 + Returns the points where this object is.
 	 +/
@@ -171,6 +170,7 @@ static immutable auto SINGLE_BLOCK_ARRAY = [Point(0, 0)];
 class Pusher : SimpleStageObject  {
 	Side facing = Side.Down;
 	
+	bool isPlayer = false;
 	StageObject grabbedObject;
 	Exit exit;
 	
