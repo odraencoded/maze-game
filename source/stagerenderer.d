@@ -30,8 +30,8 @@ class StageRenderer : Drawable {
 	void draw(RenderTarget renderTarget, RenderStates states) {
 		if(!(stage is null)) {
 			renderExits(renderTarget);
-			renderPushers(renderTarget);
 			renderWalls(renderTarget);
+			renderPushers(renderTarget);
 		}
 	}
 	
@@ -47,7 +47,7 @@ class StageRenderer : Drawable {
 		auto exitSpriteMap = gameAssets.maps[Asset.GroundMap];
 		auto exitSprite = new TileSprite();
 		exitSprite.texture = &gameAssets.textures[Asset.GroundTexture];
-		exitSprite.piece = &exitSpriteMap[GroundMapKeys.Exit];
+		exitSprite.piece = exitSpriteMap[GroundMapKeys.Exit];
 		foreach(Exit exit; stage.exits) {
 			if(!isVisible(exit))
 				continue;
@@ -70,7 +70,7 @@ class StageRenderer : Drawable {
 			pusherSprite.position = pusher.position * BLOCK_SIZE;
 			
 			immutable auto spriteKey = getSpriteKey(pusher);
-			pusherSprite.piece = &pusherSpriteMap[spriteKey];
+			pusherSprite.piece = pusherSpriteMap[spriteKey];
 			
 			renderTarget.draw(pusherSprite);
 		}

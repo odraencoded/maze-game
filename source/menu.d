@@ -37,7 +37,7 @@ class MenuContext : Drawable {
 		selectorSprite.texture = &assets.textures[Asset.SymbolTexture];
 		
 		auto symbolMap = assets.maps[Asset.SymbolMap];
-		selectorSprite.piece = &symbolMap[SymbolMapKeys.MenuSelector];
+		selectorSprite.piece = symbolMap[SymbolMapKeys.MenuSelector];
 	}
 	
 	MenuItem[] createMenuItems(string[] strings) {

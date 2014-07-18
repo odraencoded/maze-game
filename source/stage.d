@@ -19,7 +19,7 @@ class Stage {
 	Exit[] exits;
 	
 	auto getObjects() {
-		return chain(pushers, walls);
+		return chain(pushers, walls, exits);
 	}
 	
 	Exit getExit(in Point point) pure {
@@ -38,20 +38,39 @@ class Stage {
 	StageObject[]
 	getObstacles(in Point position, in Side direction = Side.None) {
 		immutable auto destination = position + direction.getOffset();
+		return getObjects(destination, o => o.isObstacle);
+	}
+	
+	StageObject[]
+	getObjects(
+		in Point position, bool delegate(StageObject) objectFilter = null
+	) {
+		bool positionFilter(StageObject anObject) {
+			if(objectFilter is null || objectFilter(anObject)) {
+				immutable auto offset = anObject.getBlockOffset();
+				return canFind(anObject.getBlocks(), position - offset);
+			} else {
+				return false;
+			}
+		}
 		
+		import std.array : array;
+		import std.conv : to;
+		
+		auto objects = getObjects();
+		return filter!(positionFilter)(objects).array.to!(StageObject[]);
+	}
+	
+	StageObject[]
+	getObjects(bool delegate(StageObject) filter) {
 		StageObject[] result;
-		auto objects = chain(pushers, walls);
+		auto objects = getObjects();
 		
 		foreach(StageObject anObject; objects) {
-			// Skip non-obstacles
-			if(!anObject.isObstacle)
+			if(filter && !filter(anObject))
 				continue;
 			
-			immutable auto offset = anObject.getBlockOffset();
-			if(canFind(anObject.getBlocks(), destination - offset)) {
-				
-				result ~= anObject;
-			}
+			result ~= anObject;
 		}
 		return result;
 	}

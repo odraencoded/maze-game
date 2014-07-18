@@ -3,6 +3,7 @@ import std.path : slash = dirSeparator;
 
 import dsfml.graphics;
 
+import anchoring;
 import game;
 import gamescreen;
 import mazescreen;
@@ -16,6 +17,8 @@ import tile;
 import utility : OnOffState;
 
 enum EDITOR_DIRECTORY = "editor" ~ slash;
+
+enum SELECT_BUTTON = Mouse.Button.Left;
 enum DRAG_VIEW_BUTTON = Mouse.Button.Right;
 
 class MazeEditorScreen : GameScreen {
@@ -25,24 +28,44 @@ class MazeEditorScreen : GameScreen {
 	Signal!(MazeEditorScreen) onQuit;
 	StageRenderer stageRenderer;
 	
-	Point cursor;
-	TileSprite cursorSprite;
+	EditingToolSet toolset;
+	EditingToolSet.Anchor toolsetAnchor;
 	
+	EditingTool selectionTool;
+	
+	Point selectedBlock;
+	MovingPoint gridPointer;
+	EditableStageObject selectedObject;
+	
+	TileSprite cursorSprite;
 	Point panning;
 	
 	this(Game game) {
 		super(game);
+		auto gameAssets = game.assets;
 		
-		auto assets = game.assets;
+		toolset = new EditingToolSet(gameAssets);
 		
-		stageRenderer = new StageRenderer(assets);
+		auto toolsMap = gameAssets.maps[Asset.ToolsMap];
+		selectionTool = new EditingTool();
+		selectionTool.icon = toolsMap[ToolsMapKeys.SelectionTool];
+		
+		toolset.tools ~= selectionTool;
+		
+		toolset.activeTool = selectionTool;
+		
+		toolsetAnchor = toolset.createAnchor();
+		toolsetAnchor.side = Side.TopAndRight;
+		toolsetAnchor.margin = Point(8, 8);
+		
+		stageRenderer = new StageRenderer(gameAssets);
 		
 		// Create cursor sprite
 		cursorSprite = new TileSprite();
-		cursorSprite.texture = &assets.textures[Asset.SymbolTexture];
+		cursorSprite.texture = &gameAssets.textures[Asset.SymbolTexture];
 		
-		auto symbolMap = assets.maps[Asset.SymbolMap];
-		cursorSprite.piece = &symbolMap[SymbolMapKeys.SquareCursor];
+		auto symbolMap = gameAssets.maps[Asset.SymbolMap];
+		cursorSprite.piece = symbolMap[SymbolMapKeys.SquareCursor];
 	}
 	
 	/++
@@ -145,8 +168,27 @@ class MazeEditorScreen : GameScreen {
 		}
 		
 		// Convert mouse pointer to view coordinates
-		immutable auto viewPointer = input.pointer.position + panning;
-		cursor = viewPointer.getGridPoint(BLOCK_SIZE);
+		immutable auto viewPointer = input.pointer.current + panning;
+		gridPointer.move(viewPointer.getGridPoint(BLOCK_SIZE));
+		
+		// Updating selected block & object
+		if(input.wasButtonTurnedOn(SELECT_BUTTON)) {
+			selectedBlock = gridPointer.current;
+			auto objects = stage.getObjects(selectedBlock);
+			if(objects.length > 0) {
+				selectedObject = objects[0].getEditable();
+			} else {
+				selectedObject = null;
+			}
+		}
+		
+		// Dragging stuff
+		if(gridPointer.hasMoved && input.isButtonOn(SELECT_BUTTON)) {
+			if(selectedObject) {
+				selectedObject.drag(gridPointer.previous, gridPointer.current);
+				selectedBlock = gridPointer.current;
+			}
+		}
 	}
 	
 	override void draw(RenderTarget renderTarget, RenderStates states) {
@@ -158,9 +200,91 @@ class MazeEditorScreen : GameScreen {
 		
 		// This cursor sprite looks exceptionally bad,
 		// but it shows where the cursor is, so it will stay for a while
-		cursorSprite.position = cursor * BLOCK_SIZE;
+		cursorSprite.position = selectedBlock * BLOCK_SIZE;
 		renderTarget.draw(cursorSprite);
+		
+		// Reset view
+		renderTarget.view = game.view;
+		
+		auto toolsetStates = RenderStates();
+		renderTarget.draw(toolsetAnchor);
 	}
+}
+
+/++
+ + A set of tools.
+ +/
+class EditingToolSet : DisplayObject!int {// : DisplayObject(int) {
+	enum TOOL_WIDTH = BLOCK_SIZE;
+	enum TOOL_HEIGHT = BLOCK_SIZE;
+	
+	GameAssets assets;
+	
+	EditingTool[] tools;
+	EditingTool activeTool;
+	VertexCache backgroundCache, iconCache;
+	
+	uint width = 1;
+	
+	this(GameAssets assets) {
+		this.assets = assets;
+	}
+	
+	void updateCache() {
+		// Cache background
+		enum OUTLINE_COLOR = Color(0, 0, 0);
+		enum FACE_COLOR = Color(231, 220, 193);
+		
+		auto boxSize = getBottomRight();
+		
+		auto outlineRect = FloatRect(-1, -1, boxSize.x + 2, boxSize.y + 2);
+		auto outlineVertices = outlineRect.toVertexArray();
+		outlineVertices.dye(OUTLINE_COLOR);
+		
+		auto faceRect = IntRect(0, 0, boxSize.x, boxSize.y);
+		auto faceVertices = faceRect.toVertexArray();
+		faceVertices.dye(FACE_COLOR);
+		
+		backgroundCache = new VertexCache();
+		backgroundCache.add(outlineVertices);
+		backgroundCache.add(faceVertices);
+		
+		// Cache icons
+		iconCache = new VertexCache();
+		iconCache.texture = &assets.textures[Asset.ToolsTexture];
+		foreach(int i, ref EditingTool tool; tools) {
+			iconCache.add(tool.icon.vertices, Point(0, i * TOOL_HEIGHT));
+		}
+	}
+	
+	override void draw(RenderTarget renderTarget, RenderStates states) {
+		if(backgroundCache is null)
+			updateCache();
+		
+		renderTarget.draw(backgroundCache, states);
+		renderTarget.draw(iconCache, states);
+	}
+	
+	// Anchorable implementation
+	Point getTopLeft() {
+		return Point(0, 0);
+	}
+	
+	Point getBottomRight() {
+		Point size;
+		size.x = width * TOOL_WIDTH;
+		size.y = TOOL_HEIGHT * (tools.length / width);
+		
+		// Rounding up. Too lazy to convert to float, get std.math, etc.
+		if(tools.length % width > 0)
+			size.y += TOOL_HEIGHT;
+		
+		return size;
+	}
+}
+
+class EditingTool {
+	const(Tile)* icon;
 }
 
 class MazeEditorSettingsScreen : GameScreen {

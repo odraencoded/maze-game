@@ -13,7 +13,7 @@ import utility;
 class InputState {
 	Command[Keyboard.Key] keyBindings;
 	Command[Mouse.Button] buttonBindings;
-	MousePointer pointer;
+	MovingPoint pointer;
 	bool close, lostFocus;
 	
 	this() {
@@ -132,6 +132,21 @@ class InputState {
 	
 	bool wasKeyTurnedOff(in Keyboard.Key key) const {
 		return getKey(key).hasFlag(OnOffState.TurnedOff);
+	}
+	
+	/++
+	 + Same stuff as above but with buttons.
+	 +/
+	bool isButtonOn(in Mouse.Button button) const {
+		return getButton(button).hasFlag(OnOffState.On);
+	}
+	
+	bool wasButtonTurnedOn(in Mouse.Button button) const {
+		return getButton(button).hasFlag(OnOffState.TurnedOn);
+	}
+	
+	bool wasButtonTurnedOff(in Mouse.Button button) const {
+		return getButton(button).hasFlag(OnOffState.TurnedOff);
 	}
 	
 	Side getSystemSides(in OnOffState state) const {
@@ -271,25 +286,5 @@ class InputState {
 		// What keyboard keys and mouse buttons changed in a cycle
 		Keyboard.Key[] _changed_key_input;
 		Mouse.Button[] _changed_button_input;
-	}
-}
-
-struct MousePointer {
-	Point position, previous;
-	
-	/++
-	 + Returns the difference between its current position and
-	 + its previous position.
-	 +/
-	Point movement() const pure nothrow @safe @property {
-		return position - previous;
-	}
-	
-	/++
-	 + Sets a new current position
-	 +/
-	void move(Point newPosition) pure nothrow @safe {
-		previous = position;
-		position = newPosition;
 	}
 }

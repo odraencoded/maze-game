@@ -29,6 +29,39 @@ T round(T: Vector2!U, U)(in T vector) {
 	return T(vector.x.nearbyint, vector.y.nearbyint);
 }
 
+/++
+ + Returns a point based on side.
+ + The return vector has an X equal to left, "center", and right
+ + depending on whether the horizontal flags are Side.Left, Side.None or 
+ + Side.Left | Side.Right, and Side.Right respectively.
+ + Same thing for vertical.
+ + e.g Side.None | Side.Vertical return the center point.
+ +     Side.Left | Side.Top returns top-left.
+ +/
+Vector2!T getAnchor(T)(
+	in Side side, in T left, in T top, in T right, in T bottom
+) pure @safe {
+	Vector2!T result;
+	
+	immutable auto horizontal = side & Side.Horizontal;
+	if(horizontal == Side.Left) result.x = left;
+	else if(horizontal == Side.Right) result.x = right;
+	else result.x = left + (right - left) / 2;
+	
+	immutable auto vertical = side & Side.Vertical;
+	if(vertical == Side.Top) result.y = top;
+	else if(vertical == Side.Bottom) result.y = bottom;
+	else result.y = top + (bottom - top) / 2;
+	
+	return result;
+}
+
+auto getAnchor(T)(
+	in Side side, in Vector2!T topLeft, in Vector2!T bottomRight
+) pure @safe {
+	return getAnchor(side, topLeft.x, topLeft.y, bottomRight.x, bottomRight.y);
+}
+
 /++ 
  + Returns at which point in a grid a vector would be.
  + Equivalent to dividing vector by gridSize, rounding it down and
@@ -77,6 +110,12 @@ enum Side : ubyte {
 	Diagonal = TopRight | TopLeft | BottomRight | BottomLeft,
 	
 	All = Vertical | Horizontal | Diagonal,
+	
+	// More useless enum values, yay!
+	TopAndLeft     = Top    | Left,
+	TopAndRight    = Top    | Right,
+	BottomAndLeft  = Bottom | Left,
+	BottomAndRight = Bottom | Right,
 }
 
 /**
@@ -115,6 +154,40 @@ pure struct Box {
 	
 	int area() const @property {
 		return width * height;
+	}
+}
+
+/++
+ + A point that moves
+ +/
+struct MovingPoint {
+	Point current, previous;
+	
+	this(Point position = Point(0, 0)) {
+		current = previous = position;
+	}
+	
+	/++
+	 + Returns the difference between its current position and
+	 + its previous position.
+	 +/
+	Point movement() const pure nothrow @safe @property {
+		return current - previous;
+	}
+	
+	/++
+	 + Sets a new current position
+	 +/
+	void move(Point newPosition) pure nothrow @safe {
+		previous = current;
+		current = newPosition;
+	}
+	
+	/++
+	 + Whether it has moved between now and then.
+	 +/
+	bool hasMoved() const pure nothrow @safe @property {
+		return previous != current;
 	}
 }
 

@@ -18,6 +18,11 @@ interface StageObject {
 	JSONValue serialize() const;
 	
 	/++
+	 + Creates an EditableStageObject for this object.
+	 +/
+	EditableStageObject getEditable();
+	
+	/++
 	 + Returns the points where this object is.
 	 +/
 	const(Point[]) getBlocks();
@@ -112,6 +117,16 @@ interface StageObject {
 	}
 }
 
+
+/++
+ + Lets objects be edited in the level editor.
+ +/
+interface EditableStageObject {
+	StageObject getOwner();
+	
+	void drag(Point from, Point to);
+}
+
 /++
  + A simple implementation of StageObject.
  +/
@@ -120,6 +135,10 @@ abstract class SimpleStageObject : StageObject {
 	
 	bool grabbable, obstacle;
 	Pusher grabber;
+	
+	SimpleEditableStageObject getEditable() {
+		return new SimpleEditableStageObject(this);
+	}
 	
 	const(Point[]) getBlocks() { return SINGLE_BLOCK_ARRAY; }
 	Point getBlockOffset() { return position; }
@@ -162,6 +181,25 @@ abstract class SimpleStageObject : StageObject {
 	
 	void moveAlone(Stage stage, in Side direction) {
 		position += direction.getOffset();
+	}
+}
+
+/++
+ + A simple implementation of EditableStageObject.
+ +/
+class SimpleEditableStageObject : EditableStageObject {
+	SimpleStageObject owner;
+	
+	this(SimpleStageObject owner) {
+		this.owner = owner;
+	}
+	
+	void drag(Point from, Point to) {
+		owner.position += to - from;
+	}
+	
+	SimpleStageObject getOwner() {
+		return owner;
 	}
 }
 
@@ -406,8 +444,11 @@ class Wall : SimpleStageObject {
 	}
 }
 
-class Exit {
-	Point position;
+class Exit : SimpleStageObject {
+	this() {
+		grabbable = false;
+		obstacle = false;
+	}
 	
 	JSONValue serialize() const {
 		return JSONValue([position.x, position.y]);

@@ -67,6 +67,9 @@ enum Asset {
 	
 	SymbolMap = "symbol",
 	SymbolTexture = "symbol",
+	
+	ToolsMap = "tools",
+	ToolsTexture = "tools",
 }
 
 enum PusherMapKeys {
@@ -88,4 +91,8 @@ enum WallMapKeys {
 
 enum SymbolMapKeys {
 	MenuSelector, SquareCursor
+}
+
+enum ToolsMapKeys {
+	SelectionTool
 }

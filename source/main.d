@@ -219,6 +219,7 @@ private void loadAssets(Game mazeGame) {
 		texturePaths[Asset.WallForegroundTexture] = SPRITES_DIRECTORY ~ "wall-foreground.png";
 		texturePaths[Asset.WallOutlineTexture] = SPRITES_DIRECTORY ~ "wall-outline.png";
 		texturePaths[Asset.SymbolTexture] = SPRITES_DIRECTORY ~ "symbol.png";
+		texturePaths[Asset.ToolsTexture] = SPRITES_DIRECTORY ~ "tools.png";
 		
 		foreach(Asset aKey, string aTexturePath; texturePaths) {
 			auto newTexture = new Texture();
@@ -263,5 +264,10 @@ private void loadAssets(Game mazeGame) {
 		
 		symbolMap.addPiece(SymbolMapKeys.MenuSelector, Point(0, 0));
 		symbolMap.addPiece(SymbolMapKeys.SquareCursor, IntRect(1, 0, 3, 3), Vector2f(1, 1));
+		
+		auto toolsMap = new TextureMap(Point(16, 16));
+		assets.maps[Asset.ToolsMap] = toolsMap;
+		
+		toolsMap.addPiece(ToolsMapKeys.SelectionTool, Point(0, 2));
 	}
 }
