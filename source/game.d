@@ -87,5 +87,5 @@ enum WallMapKeys {
 }
 
 enum SymbolMapKeys {
-	MenuSelector,
+	MenuSelector, SquareCursor
 }

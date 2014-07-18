@@ -59,7 +59,7 @@ void main(string[] args) {
 		// Checking events
 		input.prepareCycle();
 		
-		import dsfml.window.event : Event;
+		import dsfml.window: Event, Mouse;
 		Event event;
 		while(window.pollEvent(event)) {
 			switch(event.type) {
@@ -89,6 +89,10 @@ void main(string[] args) {
 				default:
 			}
 		}
+		
+		// Update mouse
+		auto windowPointer = Mouse.getPosition(mazeGame.window);
+		input.pointer = mazeGame.resizer.convertPointForGame(windowPointer);
 		
 		input.finishCycle();
 		
@@ -244,6 +248,7 @@ private void loadAssets(Game mazeGame) {
 		auto symbolMap = new TextureMap(Point(16, 16));
 		assets.maps[Asset.SymbolMap] = symbolMap;
 		
-		symbolMap.addPiece(SymbolMapKeys.MenuSelector , Point(0, 0));
+		symbolMap.addPiece(SymbolMapKeys.MenuSelector, Point(0, 0));
+		symbolMap.addPiece(SymbolMapKeys.SquareCursor, IntRect(1, 0, 3, 3), Vector2f(1, 1));
 	}
 }

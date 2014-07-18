@@ -17,12 +17,12 @@ T normalize(T : Vector2!U, U)(const T vector) {
 	return l > 0 ? vector / l : T(0, 0);
 }
 
-Vector2!TTo toVector(TFrom, TTo)(in Vector2!TFrom vector) {
+Vector2!TTo toVector2(TTo, TFrom)(in Vector2!TFrom vector) {
 	return Vector2!TTo(vector.x.to!TTo(), vector.y.to!TTo());
 }
 
 Vector2f toVector2f(T)(in Vector2!T vector) {
-	return vector.toVector!(T, float)();
+	return vector.toVector2!(float, T)();
 }
 
 T round(T: Vector2!U, U)(const T vector) {

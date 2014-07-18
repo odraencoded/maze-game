@@ -12,6 +12,7 @@ import signal;
 import stage;
 import stageobject;
 import stagerenderer;
+import tile;
 
 enum EDITOR_DIRECTORY = "editor" ~ slash;
 
@@ -22,10 +23,22 @@ class MazeEditorScreen : GameScreen {
 	Signal!(MazeEditorScreen) onQuit;
 	StageRenderer stageRenderer;
 	
+	Point cursor;
+	TileSprite cursorSprite;
+	
 	this(Game game) {
 		super(game);
 		
-		stageRenderer = new StageRenderer(game.assets);
+		auto assets = game.assets;
+		
+		stageRenderer = new StageRenderer(assets);
+		
+		// Create cursor sprite
+		cursorSprite = new TileSprite();
+		cursorSprite.texture = &assets.textures[Asset.SymbolTexture];
+		
+		auto symbolMap = assets.maps[Asset.SymbolMap];
+		cursorSprite.piece = &symbolMap[SymbolMapKeys.SquareCursor];
 	}
 	
 	/++
@@ -119,10 +132,17 @@ class MazeEditorScreen : GameScreen {
 			game.nextScreen = new MazeEditorSettingsScreen(game, this);
 			return;
 		}
+		
+		cursor = input.pointer / BLOCK_SIZE;
 	}
 	
 	override void draw(RenderTarget renderTarget, RenderStates states) {
 		renderTarget.draw(stageRenderer);
+		
+		// This cursor sprite looks exceptionally bad,
+		// but it shows where the cursor is, so it will stay for a while
+		cursorSprite.position = cursor * BLOCK_SIZE;
+		renderTarget.draw(cursorSprite);
 	}
 }
 

@@ -11,7 +11,7 @@ import utility;
  +/
 class InputState {
 	int[int] bindings;
-	
+	Point pointer;
 	bool close, lostFocus;
 	
 	this() {
