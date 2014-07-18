@@ -8,11 +8,11 @@ import utility;
 alias Point = Vector2!int;
 
 // Vector utilities
-U length(T : Vector2!U, U)(const T vector) {
+U length(T : Vector2!U, U)(in T vector) {
 	return (vector.x.abs.sqrt + vector.y.abs.sqrt).pow(2);
 }
 
-T normalize(T : Vector2!U, U)(const T vector) {
+T normalize(T : Vector2!U, U)(in T vector) {
 	auto l = length(vector);
 	return l > 0 ? vector / l : T(0, 0);
 }
@@ -25,8 +25,20 @@ Vector2f toVector2f(T)(in Vector2!T vector) {
 	return vector.toVector2!(float, T)();
 }
 
-T round(T: Vector2!U, U)(const T vector) {
+T round(T: Vector2!U, U)(in T vector) {
 	return T(vector.x.nearbyint, vector.y.nearbyint);
+}
+
+/++ 
+ + Returns at which point in a grid a vector would be.
+ + Equivalent to dividing vector by gridSize, rounding it down and
+ + converting to a point
+ +/
+Point getGridPoint(T: Vector2!U, U)(in T vector, in real gridSize) pure @safe {
+	immutable int x = floor(vector.x / gridSize).to!int;
+	immutable int y = floor(vector.y / gridSize).to!int;
+	
+	return Point(x, y);
 }
 
 /**

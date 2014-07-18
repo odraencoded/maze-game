@@ -59,7 +59,7 @@ void main(string[] args) {
 		// Checking events
 		input.prepareCycle();
 		
-		import dsfml.window: Event, Mouse;
+		import dsfml.window: Event, Keyboard, Mouse;
 		Event event;
 		while(window.pollEvent(event)) {
 			switch(event.type) {
@@ -75,11 +75,23 @@ void main(string[] args) {
 				
 				// Register input
 				case(Event.EventType.KeyPressed):
-					input.pressKey(event.key.code);
+					immutable auto keyCode = event.key.code;
+					input.pressKey(cast(Keyboard.Key)keyCode);
 					break;
 				
 				case(Event.EventType.KeyReleased):
-					input.releaseKey(event.key.code);
+					immutable auto keyCode = event.key.code;
+					input.releaseKey(cast(Keyboard.Key)keyCode);
+					break;
+				
+				case(Event.EventType.MouseButtonPressed):
+					immutable auto buttonCode = event.mouseButton.button;
+					input.pressButton(cast(Mouse.Button)buttonCode);
+					break;
+				
+				case(Event.EventType.MouseButtonReleased):
+					immutable auto buttonCode = event.mouseButton.button;
+					input.releaseButton(cast(Mouse.Button)buttonCode);
 					break;
 				
 				case(Event.EventType.LostFocus):
@@ -91,8 +103,9 @@ void main(string[] args) {
 		}
 		
 		// Update mouse
-		auto windowPointer = Mouse.getPosition(mazeGame.window);
-		input.pointer = mazeGame.resizer.convertPointForGame(windowPointer);
+		immutable auto windowPointer = Mouse.getPosition(mazeGame.window);
+		immutable auto gamePointer = mazeGame.resizer.scalePoint(windowPointer);
+		input.pointer.move(gamePointer);
 		
 		input.finishCycle();
 		

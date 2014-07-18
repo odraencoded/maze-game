@@ -84,9 +84,9 @@ class VideoResizer : Drawable {
 	/++
 	 + Applies video resizing to an arbitrary point.
 	 +/
-	Point convertPointForGame(Point p) {
+	Point scalePoint(Point p) {
 		immutable auto scale = _bufferSprite.scale;
-		return Vector2f(p.x / scale.x, p.y / scale.y).round.toVector2!int();
+		return Vector2f(p.x / scale.x, p.y / scale.y).toVector2!int();
 	}
 	
 	/++

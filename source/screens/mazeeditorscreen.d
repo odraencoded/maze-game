@@ -13,8 +13,10 @@ import stage;
 import stageobject;
 import stagerenderer;
 import tile;
+import utility : OnOffState;
 
 enum EDITOR_DIRECTORY = "editor" ~ slash;
+enum DRAG_VIEW_BUTTON = Mouse.Button.Right;
 
 class MazeEditorScreen : GameScreen {
 	Stage stage;
@@ -25,6 +27,8 @@ class MazeEditorScreen : GameScreen {
 	
 	Point cursor;
 	TileSprite cursorSprite;
+	
+	Point panning;
 	
 	this(Game game) {
 		super(game);
@@ -133,10 +137,23 @@ class MazeEditorScreen : GameScreen {
 			return;
 		}
 		
-		cursor = input.pointer / BLOCK_SIZE;
+		// Drag the view while the view dragging mouse button is being held.
+		// == On means it must have been TurnedOn before this cycle, so
+		// it's the button has been held for at least two cycles
+		if(input[DRAG_VIEW_BUTTON] == OnOffState.On) {
+			panning -= input.pointer.movement;
+		}
+		
+		// Convert mouse pointer to view coordinates
+		immutable auto viewPointer = input.pointer.position + panning;
+		cursor = viewPointer.getGridPoint(BLOCK_SIZE);
 	}
 	
 	override void draw(RenderTarget renderTarget, RenderStates states) {
+		// Set view
+		auto viewRect = FloatRect(panning.toVector2f, renderTarget.view.size);
+		renderTarget.view = new View(viewRect);
+		
 		renderTarget.draw(stageRenderer);
 		
 		// This cursor sprite looks exceptionally bad,
