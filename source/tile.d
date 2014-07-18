@@ -108,6 +108,46 @@ class VertexCache : Drawable {
 }
 
 /++
+ + Draws a tiled texture spanning over the whole view(screen).
+ +/
+class Backdrop : Drawable {
+	const(Texture)* texture;
+	
+	this(in Texture* texture) {
+		this.texture = texture;
+	}
+	
+	void draw(RenderTarget target, RenderStates states) {
+		states.texture = *texture;
+		Backdrop.render(target, states);
+	}
+	
+	static void render(RenderTarget target, RenderStates states) {
+		// Copy paste ALL THE THINGS!!!
+		immutable auto viewSize = target.view.size;
+		immutable auto viewCenter = target.view.center;
+		immutable auto halfViewSize = viewSize / 2;
+		
+		immutable auto top    = viewCenter.y - halfViewSize.y;
+		immutable auto left   = viewCenter.x - halfViewSize.x;
+		immutable auto bottom = viewCenter.y + halfViewSize.y;
+		immutable auto right  = viewCenter.x + halfViewSize.x;
+		
+		immutable auto topLeft     = Vector2f(left , top   );
+		immutable auto topRight    = Vector2f(right, top   );
+		immutable auto bottomRight = Vector2f(right, bottom);
+		immutable auto bottomLeft  = Vector2f(left , bottom);
+		
+		immutable Vertex[] vertices = [
+			Vertex(topLeft    , topLeft    ), Vertex(topRight   , topRight   ),
+			Vertex(bottomRight, bottomRight), Vertex(bottomLeft , bottomLeft )
+		];
+		
+		target.draw(vertices, PrimitiveType.Quads, states);
+	}
+}
+
+/++
  + Returns a vertex rectangle with its texcoords mapped to box.
  + The top left of the rectangle is origin, the bottom right is the box size.
  +/

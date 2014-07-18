@@ -40,6 +40,8 @@ class MazeEditorScreen : GameScreen {
 	TileSprite cursorSprite;
 	Point panning;
 	
+	Backdrop tiledBlueprintBackground;
+	
 	this(Game game) {
 		super(game);
 		auto gameAssets = game.assets;
@@ -66,12 +68,18 @@ class MazeEditorScreen : GameScreen {
 		
 		auto symbolMap = gameAssets.maps[Asset.SymbolMap];
 		cursorSprite.piece = symbolMap[SymbolMapKeys.SquareCursor];
+		
+		auto tiledBlueprintTexture = &gameAssets.textures[Asset.BlueprintBG];
+		tiledBlueprintBackground = new Backdrop(tiledBlueprintTexture);
 	}
 	
 	/++
 	 + Sets a stage to be edited in the editor.
 	 +/
 	void setStage(Stage newStage, StageInfo newMetadata) {
+		if(isActiveScreen)
+			game.subtitle = newMetadata.title;
+		
 		stage = newStage;
 		stageMetadata = newMetadata;
 		stage.metadata = &stageMetadata;
@@ -150,6 +158,8 @@ class MazeEditorScreen : GameScreen {
 		// screen instead
 		if(stage is null)
 			game.nextScreen = new MazeEditorSettingsScreen(game, this);
+		else
+			game.subtitle = stageMetadata.title;
 	}
 	
 	override void cycle(in InputState input, in float delta) {
@@ -180,13 +190,12 @@ class MazeEditorScreen : GameScreen {
 			} else {
 				selectedObject = null;
 			}
-		}
-		
-		// Dragging stuff
-		if(gridPointer.hasMoved && input.isButtonOn(SELECT_BUTTON)) {
+		} else if(input.isButtonOn(SELECT_BUTTON)) {
+			// Drag selected object
 			if(selectedObject) {
-				selectedObject.drag(gridPointer.previous, gridPointer.current);
-				selectedBlock = gridPointer.current;
+				immutable auto targetBlock = selectedBlock + gridPointer.movement;
+				selectedObject.drag(selectedBlock, targetBlock);
+				selectedBlock = targetBlock;
 			}
 		}
 	}
@@ -196,6 +205,10 @@ class MazeEditorScreen : GameScreen {
 		auto viewRect = FloatRect(panning.toVector2f, renderTarget.view.size);
 		renderTarget.view = new View(viewRect);
 		
+		// Draw background
+		renderTarget.draw(tiledBlueprintBackground, states);
+		
+		// Draw stage
 		renderTarget.draw(stageRenderer);
 		
 		// This cursor sprite looks exceptionally bad,

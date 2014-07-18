@@ -12,6 +12,11 @@ class GameScreen : Drawable {
 	}
 	
 	/++
+	 + Whether this is the current game screen.
+	 +/
+	final bool isActiveScreen() { return game.currentScreen == this; }
+	
+	/++
 	 + Called when this screen is about to become the game's current screen.
 	 +/
 	void appear() { }

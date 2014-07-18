@@ -70,6 +70,8 @@ enum Asset {
 	
 	ToolsMap = "tools",
 	ToolsTexture = "tools",
+	
+	BlueprintBG = "blueprint-bg",
 }
 
 enum PusherMapKeys {

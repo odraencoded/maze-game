@@ -221,9 +221,12 @@ private void loadAssets(Game mazeGame) {
 		texturePaths[Asset.SymbolTexture] = SPRITES_DIRECTORY ~ "symbol.png";
 		texturePaths[Asset.ToolsTexture] = SPRITES_DIRECTORY ~ "tools.png";
 		
+		texturePaths[Asset.BlueprintBG] = SPRITES_DIRECTORY ~ "blueprint-bg.png";
+		
 		foreach(Asset aKey, string aTexturePath; texturePaths) {
 			auto newTexture = new Texture();
 			newTexture.loadFromFile(aTexturePath);
+			newTexture.setRepeated(true);
 			assets.textures[aKey] = newTexture;
 		}
 		
