@@ -30,11 +30,6 @@ class Stage {
 		auto wallIndex = walls.countUntil(object);
 		auto exitIndex = exits.countUntil(object);
 		
-		import std.stdio;
-		writeln("P ", pusherIndex);
-		writeln("W ", wallIndex);
-		writeln("E ", exitIndex);
-		
 		if(pusherIndex >= 0) {
 			pushers = pushers.remove(pusherIndex);
 		}
@@ -129,6 +124,32 @@ class Stage {
 			result ~= anObject;
 		}
 		return result;
+	}
+	
+	T[] getObjects(T : StageObject)(
+		in Point[] sourceBlocks,
+		in Point sourceOffset,
+		bool delegate(T) testFilter,
+		T[] testedObjects,
+	) {
+		T[] result;
+		
+		Point targetOffset;
+		bool blockCollisionCheck(in Point block) {
+			// testBlock + offset == targetBlock + targetOffset
+			// testBlock == targetBlock + targetOffset - offset
+			return canFind(sourceBlocks, block + targetOffset - sourceOffset);
+		}
+		
+		bool objectCollisionCheck(StageObject target) {
+			targetOffset = target.getBlockOffset();
+			auto targetBlocks = target.getBlocks();
+			
+			return any!(blockCollisionCheck)(targetBlocks);
+		}
+		
+		auto filteredObjects = filter!(testFilter)(testedObjects);
+		return filter!(objectCollisionCheck)(filteredObjects).array;
 	}
 	
 	Wall getItem(Point position, Side direction) {

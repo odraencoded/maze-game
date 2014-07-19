@@ -246,53 +246,7 @@ class MazeEditorScreen : GameScreen {
 		if(toolset.activeTool == selectionTool) {
 			checkSelectionTool(input, delta);
 		} else if(toolset.activeTool == wallTool) {
-			if(input.wasButtonTurnedOn(SELECT_BUTTON)) {
-				// Start constructing a new wall
-				wallInConstruction = new Wall();
-				wallInConstruction.glueBlock(gridPointer.current);
-				stageRenderer.updateConstructionCache();
-			} else if(input.isButtonOn(SELECT_BUTTON)) {
-				// Add blocks to the wall
-				if(wallInConstruction && gridPointer.hasMoved) {
-					import std.algorithm;
-					
-					if(!wallInConstruction)
-						return;
-					
-					// Reset new wall blocks
-					wallInConstruction.destroyBlocks();
-					
-					// Create wall blocks in shape of a rectangle from
-					// the start of the drag until the current point
-					int left = min(gridDragStart.x, gridPointer.current.x);
-					int top = min(gridDragStart.y, gridPointer.current.y);
-					int right = max(gridDragStart.x, gridPointer.current.x);
-					int bottom = max(gridDragStart.y, gridPointer.current.y);
-					
-					foreach(int x; left..right + 1) {
-						foreach(int y; top..bottom + 1) {
-							wallInConstruction.glueBlock(Point(x, y));
-						}
-					}
-					
-					stageRenderer.updateConstructionCache();
-				}
-			} else if(input.wasButtonTurnedOff(SELECT_BUTTON)) {
-				if(!wallInConstruction)
-					return;
-				
-				// Finish constructing wall
-				context.stage.walls ~= wallInConstruction;
-				
-				// Select new wall
-				selectedBlock = wallInConstruction.getBlocks()[0];
-				selectedObject = wallInConstruction.getEditable(context);
-				wallInConstruction = null;
-				
-				// Update wall cache
-				stageRenderer.updateCachedWalls();
-				stageRenderer.updateConstructionCache();
-			}
+			checkWallTool(input, delta);
 		} else if(toolset.activeTool == pusherTool) {
 			if(input.wasButtonTurnedOn(SELECT_BUTTON)) {
 				// Add a new pusher
@@ -395,6 +349,65 @@ class MazeEditorScreen : GameScreen {
 				selectedObject.drop(selectedBlock);
 			
 			draggingMode = false;
+		}
+	}
+	
+	void checkWallTool(in InputState input, in float delta) {
+		if(input.wasButtonTurnedOn(SELECT_BUTTON)) {
+			// Start constructing a new wall
+			wallInConstruction = new Wall();
+			wallInConstruction.glueBlock(gridPointer.current);
+			stageRenderer.updateConstructionCache();
+		} else if(input.isButtonOn(SELECT_BUTTON)) {
+			// Add blocks to the wall
+			if(wallInConstruction && gridPointer.hasMoved) {
+				import std.algorithm;
+				
+				if(!wallInConstruction)
+					return;
+				
+				// Reset new wall blocks
+				wallInConstruction.destroyBlocks();
+				
+				// Create wall blocks in shape of a rectangle from
+				// the start of the drag until the current point
+				int left = min(gridDragStart.x, gridPointer.current.x);
+				int top = min(gridDragStart.y, gridPointer.current.y);
+				int right = max(gridDragStart.x, gridPointer.current.x);
+				int bottom = max(gridDragStart.y, gridPointer.current.y);
+				
+				foreach(int x; left..right + 1) {
+					foreach(int y; top..bottom + 1) {
+						wallInConstruction.glueBlock(Point(x, y));
+					}
+				}
+				
+				stageRenderer.updateConstructionCache();
+			}
+		} else if(input.wasButtonTurnedOff(SELECT_BUTTON)) {
+			if(!wallInConstruction)
+				return;
+			
+			// Finish constructing wall
+			context.stage.walls ~= wallInConstruction;
+			
+			// Tell the wall to merge with overlapping walls
+			wallInConstruction.getEditable(context).mergeOverlapping();
+			
+			// Select new wall
+			auto wallBlocks = wallInConstruction.getBlocks();
+			auto wallBlockOffset = wallInConstruction.getBlockOffset();
+			// Update selected block only if it's not already at the new wall
+			import std.algorithm : canFind;
+			if(!canFind(wallBlocks, selectedBlock - wallBlockOffset)) {
+				selectedBlock = wallInConstruction.getBlocks()[0];
+			}
+			selectedObject = wallInConstruction.getEditable(context);
+			wallInConstruction = null;
+			
+			// Update wall cache
+			stageRenderer.updateCachedWalls();
+			stageRenderer.updateConstructionCache();
 		}
 	}
 	

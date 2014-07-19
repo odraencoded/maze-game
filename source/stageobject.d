@@ -348,6 +348,25 @@ class Wall : SimpleStageObject {
 		blockPoints = null;
 	}
 	
+	/++
+	 + Adds blocks from another wall into this one.
+	 +/
+	void merge(Wall other) {
+		immutable auto shift = other.position - position;
+		foreach(Point block, Side newJoints; other.blocks) {
+			block += shift;
+			auto currentBlockSides = block in blocks;
+			if(currentBlockSides is null) {
+				blocks[block] = newJoints;
+			} else {
+				*currentBlockSides |= newJoints;
+			}
+		}
+		
+		// Invalidate blockPoints
+		blockPoints = null;
+	}
+	
 	VertexCache createSpriteCache(in TextureMap wallMap) {
 		import dsfml.system.vector2;
 		
