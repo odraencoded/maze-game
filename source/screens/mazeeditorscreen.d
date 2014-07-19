@@ -31,7 +31,7 @@ class MazeEditorScreen : GameScreen {
 	EditingToolSet toolset;
 	EditingToolSet.Anchor toolsetAnchor;
 	
-	EditingTool selectionTool, wallTool, pusherTool, exitTool;
+	EditingTool selectionTool, trashTool, wallTool, pusherTool, exitTool;
 	
 	Point selectedBlock;
 	MovingPoint gridPointer;
@@ -53,6 +53,9 @@ class MazeEditorScreen : GameScreen {
 		selectionTool = new EditingTool();
 		selectionTool.icon = toolsMap[ToolsMapKeys.SelectionTool];
 		
+		trashTool = new EditingTool();
+		trashTool.icon = toolsMap[ToolsMapKeys.TrashTool];
+		
 		wallTool = new EditingTool();
 		wallTool.icon = toolsMap[ToolsMapKeys.WallTool];
 		
@@ -62,7 +65,10 @@ class MazeEditorScreen : GameScreen {
 		exitTool = new EditingTool();
 		exitTool.icon = toolsMap[ToolsMapKeys.ExitTool];
 		
-		toolset.tools = [selectionTool, wallTool, pusherTool, exitTool];
+		toolset.tools = [
+			selectionTool, trashTool,
+			wallTool, pusherTool, exitTool
+		];
 		
 		toolset.activeTool = selectionTool;
 		
@@ -194,8 +200,14 @@ class MazeEditorScreen : GameScreen {
 		
 		if(input.wasButtonTurnedOn(SELECT_BUTTON)) {
 			// Sets the active tool on click
-			if(!(highlightTool is null)) {
-				toolset.setActive(highlightTool);
+			if(highlightTool) {
+				// Trash tool can't be active. You click it once
+				// and the selection is deleted.
+				if(highlightTool == trashTool) {
+					trashSelection();
+				} else {
+					toolset.setActive(highlightTool);
+				}
 			}
 		}
 		
@@ -286,15 +298,7 @@ class MazeEditorScreen : GameScreen {
 		}
 		
 		if(input.wasKeyTurnedOn(Keyboard.Key.Delete)) {
-			if(selectedObject) {
-				int previousWallCount = stage.walls.length;
-				if(selectedObject.deleteFromStage()) {
-					selectedObject = null;
-					if(stage.walls.length != previousWallCount) {
-						stageRenderer.updateCachedWalls();
-					}
-				}
-			}
+			trashSelection();
 		}
 	}
 	
@@ -319,6 +323,36 @@ class MazeEditorScreen : GameScreen {
 		
 		auto toolsetStates = RenderStates();
 		renderTarget.draw(toolsetAnchor);
+	}
+	
+	/++
+	 + Removes the currently selected object.
+	 + Returns whether it was removed.
+	 +/
+	bool trashSelection() {
+		if(selectedObject && trash(selectedObject)) {
+			selectedObject = null;
+			return true;
+		} else {
+			return false;
+		}
+	}
+	
+	/++
+	 + Removes an object from the stage.
+	 + Returns whether it was removed.
+	 +/
+	bool trash(EditableStageObject object) {
+		int previousWallCount = stage.walls.length;
+		if(selectedObject.deleteFromStage()) {
+			// Update wall cache if removing the object affected the wall count
+			if(stage.walls.length != previousWallCount) {
+				stageRenderer.updateCachedWalls();
+			}
+			return true;
+		} else {
+			return false;
+		}
 	}
 }
 
