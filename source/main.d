@@ -276,7 +276,8 @@ private void loadAssets(Game mazeGame) {
 		toolsMap.addPiece(ToolsMapKeys.WallTool, Point(1, 0));
 		toolsMap.addPiece(ToolsMapKeys.PusherTool, Point(2, 0));
 		toolsMap.addPiece(ToolsMapKeys.ExitTool, Point(3, 0));
-		toolsMap.addPiece(ToolsMapKeys.TrashTool, Point(0, 1));
+		toolsMap.addPiece(ToolsMapKeys.EraserTool, Point(0, 1));
 		toolsMap.addPiece(ToolsMapKeys.GlueTool, Point(1, 1));
+		toolsMap.addPiece(ToolsMapKeys.TrashTool, Point(0, 2));
 	}
 }

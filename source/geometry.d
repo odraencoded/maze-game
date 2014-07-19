@@ -79,10 +79,23 @@ Point getGridPoint(T: Vector2!U, U)(in T vector, in real gridSize) pure @safe {
  * The offset X goes from Left to Right, Y from Top to Bottom
  * If both are axes are non-zero a diagonal such as TopRight is returned.
  */
-Side getDirection(scope Point offset) pure {
-	if(offset.x) offset.x /= abs(offset.x);
-	if(offset.y) offset.y /= abs(offset.y);
-	return DIRECTION_TABLE[offset];
+Direction getDirection(in Point offset) pure {
+	Point key;
+	if(offset.x) key.x = offset.x / abs(offset.x);
+	if(offset.y) key.y = offset.y / abs(offset.y);
+	return DIRECTION_TABLE[key];
+}
+
+/++
+ + Returns an associative array with points offset by the direction
+ + represented by each bit flag of direction.
+ +/
+Point[Direction] getNeighbours(in Point center, in Direction directions) {
+	Point[Direction] result;
+	foreach(Direction aDirection; directions.getFlags()) {
+		result[aDirection] = center + aDirection.getOffset();
+	}
+	return result;
 }
 
 /**
@@ -109,6 +122,8 @@ enum Side : ubyte {
 	Horizontal = Left | Right,
 	Diagonal = TopRight | TopLeft | BottomRight | BottomLeft,
 	
+	Cardinal = Horizontal | Vertical,
+	
 	All = Vertical | Horizontal | Diagonal,
 	
 	// More useless enum values, yay!
@@ -117,6 +132,8 @@ enum Side : ubyte {
 	BottomAndLeft  = Bottom | Left,
 	BottomAndRight = Bottom | Right,
 }
+
+alias Direction = Side;
 
 /**
  * Returns a Point representing an offset towards a direction.

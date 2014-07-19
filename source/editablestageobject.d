@@ -35,6 +35,13 @@ interface EditableStageObject {
 	void setFixed(bool fixed);
 	
 	/++
+	 + Removes a block associated to this object.
+	 + Returns whether the point was removed and whether the object was
+	 + completely erased.
+	 +/
+	bool eraseBlock(in Point point, out bool destroyed);
+	
+	/++
 	 + Remove this object from the stage.
 	 +/
 	bool deleteFromStage();
@@ -55,6 +62,15 @@ class SimpleEditableStageObject : EditableStageObject {
 	bool isFixed() { return !owner.grabbable; }
 	bool canBeFixed() { return false; }
 	void setFixed(bool fixed) { owner.grabbable = !fixed; }
+	
+	bool eraseBlock(in Point point, out bool destroyed) {
+		if(point == owner.position) {
+			destroyed = deleteFromStage();
+			return destroyed;
+		} else {
+			return false;
+		}
+	}
 	
 	bool grab(in Point grabPoint) { return true; }
 	
@@ -151,6 +167,54 @@ class WallEditable : SimpleEditableStageObject {
 			context.stageRenderer.updateCachedWalls();
 		}
 	}
+	
+	override bool eraseBlock(in Point block, out bool destroyed) {
+		// Convert block to local
+		auto localBlock = block - wallOwner.getBlockOffset();
+		
+		// This returns true if the block was in the associative array btw
+		if(wallOwner.blocks.remove(localBlock)) {
+			// Invalidate blockPoints
+			wallOwner.blockPoints = null;
+			
+			// Update neighbouring blocks
+			auto neighbours = localBlock.getNeighbours(Direction.Cardinal);
+			foreach(Side aSide, Point aNeighbour; neighbours) {
+				Side* neighbourJoints = aNeighbour in wallOwner.blocks;
+				if(neighbourJoints) {
+					*neighbourJoints &= ~aSide.getOpposite();
+				}
+			}
+			
+			// Check if wall has split into multiple walls
+			auto clusters = wallOwner.checkSplit();
+			if(clusters.length == 0) {
+				destroyed = true;
+			} else if(clusters.length > 1) {
+				// Keep the first cluster for this wall
+				wallOwner.blocks = clusters[0];
+				
+				// Create new walls for the rest.
+				// Fun fact: there can be only up to 3 new walls created by
+				// erasing a single block from a wall
+				foreach(Side[Point] aCluster; clusters[1..$]) {
+					auto newWall = wallOwner.createAlike();
+					newWall.blocks = aCluster;
+					context.stage.walls ~= newWall;
+				}
+			}
+			
+			// Update graphic cache
+			context.stageRenderer.updateCachedWalls();
+			
+			// Successfully removed the block.
+			return true;
+		} else {
+			// Couldn't remove the block, return false because.
+			return false;
+		}
+	}
+	
 	
 	/++
 	 + Merges this wall with overlapping walls in the stage and removes them.

@@ -349,22 +349,84 @@ class Wall : SimpleStageObject {
 	}
 	
 	/++
-	 + Adds blocks from another wall into this one.
+	 + Add blocks to this wall.
 	 +/
-	void merge(Wall other) {
-		immutable auto shift = other.position - position;
-		foreach(Point block, Side newJoints; other.blocks) {
-			block += shift;
-			auto currentBlockSides = block in blocks;
-			if(currentBlockSides is null) {
-				blocks[block] = newJoints;
-			} else {
-				*currentBlockSides |= newJoints;
+	void addBlocks(Side[Point] newBlocks) {
+		if(blocks.length == 0) {
+			position = Point(0, 0);
+			blocks = newBlocks;
+		} else {
+			immutable auto offset = this.getBlockOffset();
+			foreach(Point block, Side joints; newBlocks) {
+				blocks[block - offset] |= joints;
 			}
 		}
 		
 		// Invalidate blockPoints
 		blockPoints = null;
+	}
+	
+	/++
+	 + Adds blocks from another wall into this one.
+	 +/
+	void merge(Wall other) {
+		addBlocks(other.blocks.dup);
+	}
+	
+	
+	/++
+	 + Checks whether this wall blocks have been split, forming multiple
+	 + disconnected clusters.
+	 + Returns said clusters.
+	 +/
+	Side[Point][] checkSplit() {
+		import std.algorithm;
+		
+		Point[] checkedPoints;
+		Side[Point][] clusters;
+		
+		foreach(Point p; blocks.byKey) {
+			if(canFind(checkedPoints, p))
+				continue;
+			
+			Side[Point] connectedBlocks;
+			Point[] heads = [p];
+			
+			while(heads.length > 0) {
+				Point[] newHeads;
+				foreach(Point aHead; heads) {
+					checkedPoints ~= aHead;
+					connectedBlocks[aHead] = blocks[aHead];
+					
+					auto neighbours = aHead.getNeighbours(Direction.Cardinal);
+					foreach(Point aNeighbour; neighbours.byValue) {
+						if(canFind(checkedPoints, aNeighbour))
+							continue;
+						
+						if(aNeighbour !in blocks)
+							continue;
+						
+						newHeads ~= aNeighbour;
+					}
+				}
+				
+				heads = newHeads;
+			}
+			
+			clusters ~= connectedBlocks;
+		}
+		
+		return clusters;
+	}
+	
+	/++
+	 + Returns a new wall without blocks but with properties like this one.
+	 +/
+	Wall createAlike() {
+		auto newWall = new Wall();
+		newWall.position = this.position;
+		newWall.grabbable = this.grabbable;
+		return newWall;
 	}
 	
 	VertexCache createSpriteCache(in TextureMap wallMap) {

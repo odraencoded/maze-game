@@ -40,7 +40,9 @@ class MazeEditorScreen : GameScreen {
 	EditingToolSet.Anchor toolsetAnchor;
 	
 	EditingTool
-		selectionTool, trashTool, wallTool, glueTool, pusherTool, exitTool;
+		selectionTool, eraserTool, trashTool,
+		wallTool, glueTool,
+		pusherTool, exitTool;
 	
 	Point selectedBlock, gridDragStart, gridLastDraggedBlock;
 	bool draggingMode;
@@ -64,6 +66,9 @@ class MazeEditorScreen : GameScreen {
 		selectionTool = new EditingTool();
 		selectionTool.icon = toolsMap[ToolsMapKeys.SelectionTool];
 		
+		eraserTool = new EditingTool();
+		eraserTool.icon = toolsMap[ToolsMapKeys.EraserTool];
+		
 		trashTool = new EditingTool();
 		trashTool.icon = toolsMap[ToolsMapKeys.TrashTool];
 		
@@ -80,7 +85,7 @@ class MazeEditorScreen : GameScreen {
 		exitTool.icon = toolsMap[ToolsMapKeys.ExitTool];
 		
 		toolset.tools = [
-			selectionTool, trashTool,
+			selectionTool, eraserTool, trashTool,
 			wallTool, glueTool,
 			pusherTool, exitTool
 		];
@@ -294,6 +299,21 @@ class MazeEditorScreen : GameScreen {
 			checkSelectionTool(input, delta);
 		} else if(toolset.activeTool == wallTool) {
 			checkWallTool(input, delta);
+		} else if(toolset.activeTool == eraserTool) {
+			bool erase;
+			erase = input.wasButtonTurnedOn(SELECT_BUTTON);
+			erase |= input.isButtonOn(SELECT_BUTTON) && gridPointer.hasMoved;
+			if(erase) {
+				setSelection(gridPointer.current);
+				
+				if(selectedObject) {
+					bool destroyed;
+					selectedObject.eraseBlock(selectedBlock, destroyed);
+					if(destroyed) {
+						selectedObject = null;
+					}
+				}
+			}
 		} else if(toolset.activeTool == pusherTool) {
 			if(input.wasButtonTurnedOn(SELECT_BUTTON)) {
 				// Add a new pusher
@@ -355,14 +375,7 @@ class MazeEditorScreen : GameScreen {
 	
 	void checkSelectionTool(in InputState input, in float delta) {
 		if(input.wasButtonTurnedOn(SELECT_BUTTON)) {
-			// Select something
-			selectedBlock = gridPointer.current;
-			auto objects = context.stage.getObjects(selectedBlock);
-			if(objects.length > 0) {
-				selectedObject = objects[0].getEditable(context);
-			} else {
-				selectedObject = null;
-			}
+			setSelection(gridPointer.current);
 		} else if(input.isButtonOn(SELECT_BUTTON)) {
 			// Drag selected object
 			// Can only drag if there is something selected
@@ -455,6 +468,19 @@ class MazeEditorScreen : GameScreen {
 			// Update wall cache
 			stageRenderer.updateCachedWalls();
 			stageRenderer.updateConstructionCache();
+		}
+	}
+	
+	/++
+	 + Sets selectedBlock and selectedObject to a given point
+	 +/
+	void setSelection(Point point) {
+		selectedBlock = point;
+		auto objects = context.stage.getObjects(selectedBlock);
+		if(objects.length > 0) {
+			selectedObject = objects[0].getEditable(context);
+		} else {
+			selectedObject = null;
 		}
 	}
 	

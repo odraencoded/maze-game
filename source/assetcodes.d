@@ -43,7 +43,7 @@ enum SymbolMapKeys {
 }
 
 enum ToolsMapKeys {
-	SelectionTool, TrashTool,
+	SelectionTool, EraserTool, TrashTool,
 	WallTool, GlueTool,
 	PusherTool, ExitTool, 
 }
