@@ -35,7 +35,7 @@ class MazeEditorScreen : GameScreen {
 	EditingTool
 		selectionTool, trashTool, wallTool, glueTool, pusherTool, exitTool;
 	
-	Point selectedBlock, gridDragStart;
+	Point selectedBlock, gridDragStart, gridLastDraggedBlock;
 	bool draggingMode;
 	MovingPoint gridPointer;
 	EditableStageObject selectedObject;
@@ -251,6 +251,8 @@ class MazeEditorScreen : GameScreen {
 		// Set where the drag started
 		if(input.wasButtonTurnedOn(SELECT_BUTTON)) {
 			gridDragStart = gridPointer.current;
+		} else if(input.isButtonOn(SELECT_BUTTON)) {
+			gridLastDraggedBlock = gridPointer.current;
 		}
 		
 		// Updating selected block & object
@@ -382,10 +384,10 @@ class MazeEditorScreen : GameScreen {
 				
 				// Create wall blocks in shape of a rectangle from
 				// the start of the drag until the current point
-				int left = min(gridDragStart.x, gridPointer.current.x);
-				int top = min(gridDragStart.y, gridPointer.current.y);
-				int right = max(gridDragStart.x, gridPointer.current.x);
-				int bottom = max(gridDragStart.y, gridPointer.current.y);
+				int left = min(gridDragStart.x, gridLastDraggedBlock.x);
+				int top = min(gridDragStart.y, gridLastDraggedBlock.y);
+				int right = max(gridDragStart.x, gridLastDraggedBlock.x);
+				int bottom = max(gridDragStart.y, gridLastDraggedBlock.y);
 				
 				foreach(int x; left..right + 1) {
 					foreach(int y; top..bottom + 1) {
@@ -411,7 +413,7 @@ class MazeEditorScreen : GameScreen {
 			// Update selected block only if it's not already at the new wall
 			import std.algorithm : canFind;
 			if(!canFind(wallBlocks, selectedBlock - wallBlockOffset)) {
-				selectedBlock = wallInConstruction.getBlocks()[0];
+				selectedBlock = gridLastDraggedBlock;
 			}
 			selectedObject = wallInConstruction.getEditable(context);
 			wallInConstruction = null;
