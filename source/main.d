@@ -272,10 +272,11 @@ private void loadAssets(Game mazeGame) {
 		auto toolsMap = new TextureMap(Point(16, 16));
 		assets.maps[Asset.ToolsMap] = toolsMap;
 		
-		toolsMap.addPiece(ToolsMapKeys.SelectionTool, Point(0, 2));
-		toolsMap.addPiece(ToolsMapKeys.WallTool, Point(1, 2));
-		toolsMap.addPiece(ToolsMapKeys.PusherTool, Point(2, 2));
-		toolsMap.addPiece(ToolsMapKeys.ExitTool, Point(3, 2));
-		toolsMap.addPiece(ToolsMapKeys.TrashTool, Point(0, 3));
+		toolsMap.addPiece(ToolsMapKeys.SelectionTool, Point(0, 0));
+		toolsMap.addPiece(ToolsMapKeys.WallTool, Point(1, 0));
+		toolsMap.addPiece(ToolsMapKeys.PusherTool, Point(2, 0));
+		toolsMap.addPiece(ToolsMapKeys.ExitTool, Point(3, 0));
+		toolsMap.addPiece(ToolsMapKeys.TrashTool, Point(0, 1));
+		toolsMap.addPiece(ToolsMapKeys.GlueTool, Point(1, 1));
 	}
 }

@@ -44,7 +44,8 @@ enum SymbolMapKeys {
 
 enum ToolsMapKeys {
 	SelectionTool, TrashTool,
-	WallTool, PusherTool, ExitTool, 
+	WallTool, GlueTool,
+	PusherTool, ExitTool, 
 }
 
 static immutable int[int] PUSHER_FACING_TO_KEY_TABLE;

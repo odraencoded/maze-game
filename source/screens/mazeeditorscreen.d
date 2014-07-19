@@ -32,7 +32,8 @@ class MazeEditorScreen : GameScreen {
 	EditingToolSet toolset;
 	EditingToolSet.Anchor toolsetAnchor;
 	
-	EditingTool selectionTool, trashTool, wallTool, pusherTool, exitTool;
+	EditingTool
+		selectionTool, trashTool, wallTool, glueTool, pusherTool, exitTool;
 	
 	Point selectedBlock, gridDragStart;
 	bool draggingMode;
@@ -51,6 +52,7 @@ class MazeEditorScreen : GameScreen {
 		
 		toolset = new EditingToolSet(gameAssets);
 		
+		// Create tools
 		auto toolsMap = gameAssets.maps[Asset.ToolsMap];
 		selectionTool = new EditingTool();
 		selectionTool.icon = toolsMap[ToolsMapKeys.SelectionTool];
@@ -61,6 +63,9 @@ class MazeEditorScreen : GameScreen {
 		wallTool = new EditingTool();
 		wallTool.icon = toolsMap[ToolsMapKeys.WallTool];
 		
+		glueTool = new EditingTool();
+		glueTool.icon = toolsMap[ToolsMapKeys.GlueTool];
+		
 		pusherTool = new EditingTool();
 		pusherTool.icon = toolsMap[ToolsMapKeys.PusherTool];
 		
@@ -69,7 +74,8 @@ class MazeEditorScreen : GameScreen {
 		
 		toolset.tools = [
 			selectionTool, trashTool,
-			wallTool, pusherTool, exitTool
+			wallTool, glueTool,
+			pusherTool, exitTool
 		];
 		
 		toolset.activeTool = selectionTool;
@@ -214,6 +220,11 @@ class MazeEditorScreen : GameScreen {
 				// and the selection is deleted.
 				if(highlightTool == trashTool) {
 					trashSelection();
+				} else if(highlightTool == glueTool) {
+					// Toggle glued/unglued walls
+					if(selectedObject && selectedObject.canBeFixed) {
+						selectedObject.setFixed(!selectedObject.isFixed());
+					}
 				} else {
 					toolset.setActive(highlightTool);
 				}

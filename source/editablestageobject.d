@@ -27,7 +27,12 @@ interface EditableStageObject {
 	/++
 	 + Drops an object. Finishing dragging it.
 	 +/
-	 void drop(in Point dropPoint);
+	void drop(in Point dropPoint);
+	
+	// Fixed-bility stuff
+	bool isFixed();
+	bool canBeFixed();
+	void setFixed(bool fixed);
 	
 	/++
 	 + Remove this object from the stage.
@@ -46,6 +51,10 @@ class SimpleEditableStageObject : EditableStageObject {
 		this.owner = owner;
 		this.context = context;
 	}
+	
+	bool isFixed() { return !owner.grabbable; }
+	bool canBeFixed() { return false; }
+	void setFixed(bool fixed) { owner.grabbable = !fixed; }
 	
 	bool grab(in Point grabPoint) { return true; }
 	
@@ -114,6 +123,8 @@ class WallEditable : SimpleEditableStageObject {
 		super(context, owner);
 		this.wallOwner = owner;
 	}
+	
+	override bool canBeFixed() { return true; }
 	
 	override bool deleteFromStage() {
 		if(super.deleteFromStage()) {
