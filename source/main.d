@@ -196,6 +196,7 @@ private auto setupInput() {
 private void loadAssets(Game mazeGame) {
 	import dsfml.graphics;
 	
+	import assetcodes;
 	import tile;
 	
 	enum ASSETS_DIRECTORY = "assets" ~ slash;

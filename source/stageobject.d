@@ -2,6 +2,8 @@ import std.algorithm;
 import std.conv;
 import std.range;
 
+import assetcodes;
+import editablestageobject;
 import game;
 import geometry;
 import json;
@@ -20,7 +22,7 @@ interface StageObject {
 	/++
 	 + Creates an EditableStageObject for this object.
 	 +/
-	EditableStageObject getEditable(Stage stage);
+	EditableStageObject getEditable(EditingContext context);
 	
 	/++
 	 + Returns the points where this object is.
@@ -117,21 +119,6 @@ interface StageObject {
 	}
 }
 
-
-/++
- + Lets objects be edited in the level editor.
- +/
-interface EditableStageObject {
-	StageObject getOwner();
-	
-	void drag(Point from, Point to);
-	
-	/++
-	 + Remove this object from the stage.
-	 +/
-	bool deleteFromStage();
-}
-
 /++
  + A simple implementation of StageObject.
  +/
@@ -141,8 +128,8 @@ abstract class SimpleStageObject : StageObject {
 	bool grabbable, obstacle;
 	Pusher grabber;
 	
-	SimpleEditableStageObject getEditable(Stage stage) {
-		return new SimpleEditableStageObject(this, stage);
+	SimpleEditableStageObject getEditable(EditingContext context) {
+		return new SimpleEditableStageObject(context, this);
 	}
 	
 	const(Point[]) getBlocks() { return SINGLE_BLOCK_ARRAY; }
@@ -186,31 +173,6 @@ abstract class SimpleStageObject : StageObject {
 	
 	void moveAlone(Stage stage, in Side direction) {
 		position += direction.getOffset();
-	}
-}
-
-/++
- + A simple implementation of EditableStageObject.
- +/
-class SimpleEditableStageObject : EditableStageObject {
-	SimpleStageObject owner;
-	Stage stage;
-	
-	this(SimpleStageObject owner, Stage stage) {
-		this.owner = owner;
-		this.stage = stage;
-	}
-	
-	void drag(Point from, Point to) {
-		owner.position += to - from;
-	}
-	
-	SimpleStageObject getOwner() {
-		return owner;
-	}
-	
-	bool deleteFromStage() {
-		return stage.remove(owner);
 	}
 }
 
@@ -297,12 +259,8 @@ class Wall : SimpleStageObject {
 	
 	override const(Point[]) getBlocks() {
 		if(blockPoints is null) {
-			blockPoints = new Point[blocks.length];
-			int i = 0;
-			foreach(Point aPoint; blocks.byKey) {
-				blockPoints[i] = aPoint;
-				i++;
-			}
+			import std.array;
+			blockPoints = blocks.byKey.array;
 		}
 		return blockPoints;
 	}
@@ -324,7 +282,6 @@ class Wall : SimpleStageObject {
 		
 		return data;
 	}
-	
 	
 	static Wall load(JSONValue json) {
 		auto result = new Wall();
@@ -348,6 +305,10 @@ class Wall : SimpleStageObject {
 		}
 		
 		return result;
+	}
+	
+	override WallEditable getEditable(EditingContext context) {
+		return new WallEditable(context, this);
 	}
 	
 	/++

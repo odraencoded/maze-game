@@ -59,6 +59,35 @@ class Stage {
 	}
 	
 	/++
+	 + Returns whether any of blocks shifted by offset collides with any
+	 + StageObject that satisfies collisionFilter
+	 +/
+	bool collidesWithAny(
+		in Point[] testedBlocks,
+		in Point offset,
+		bool delegate(StageObject) collisionFilter
+	) {
+		// Standard algorithms everywhere!
+		
+		Point targetOffset;
+		bool blockCollisionCheck(in Point block) {
+			// testBlock + offset == targetBlock + targetOffset
+			// testBlock == targetBlock + targetOffset - offset
+			return canFind(testedBlocks, block + targetOffset - offset);
+		}
+		
+		bool objectCollisionCheck(StageObject target) {
+			targetOffset = target.getBlockOffset();
+			auto targetBlocks = target.getBlocks();
+			
+			return any!(blockCollisionCheck)(targetBlocks);
+		}
+		
+		auto filteredObjects = filter!(collisionFilter)(getObjects());
+		return any!(objectCollisionCheck)(filteredObjects);
+	}
+	
+	/++
 	 + Returns obstacles between position and
 	 + the point at direction of position.
 	 +/

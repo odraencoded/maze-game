@@ -3,6 +3,7 @@ import std.path: slash = dirSeparator;
 
 import dsfml.graphics;
 
+import assetcodes;
 import game;
 import input;
 import menu;

@@ -4,6 +4,8 @@ import std.path : slash = dirSeparator;
 import dsfml.graphics;
 
 import anchoring;
+import assetcodes;
+import editablestageobject;
 import game;
 import gamescreen;
 import mazescreen;
@@ -22,8 +24,7 @@ enum SELECT_BUTTON = Mouse.Button.Left;
 enum DRAG_VIEW_BUTTON = Mouse.Button.Right;
 
 class MazeEditorScreen : GameScreen {
-	Stage stage;
-	StageInfo stageMetadata;
+	EditingContext context;
 	
 	Signal!(MazeEditorScreen) onQuit;
 	MazeEditorStageRenderer stageRenderer;
@@ -34,6 +35,7 @@ class MazeEditorScreen : GameScreen {
 	EditingTool selectionTool, trashTool, wallTool, pusherTool, exitTool;
 	
 	Point selectedBlock, gridDragStart;
+	bool draggingMode;
 	MovingPoint gridPointer;
 	EditableStageObject selectedObject;
 	Wall wallInConstruction;
@@ -96,11 +98,15 @@ class MazeEditorScreen : GameScreen {
 		if(isActiveScreen)
 			game.subtitle = newMetadata.title;
 		
-		stage = newStage;
-		stageMetadata = newMetadata;
-		stage.metadata = &stageMetadata;
+		context = new EditingContext();
+		context.editorScreen = this;
+		context.stage = newStage;
+		context.stageMetadata = newMetadata;
+		context.stageRenderer = stageRenderer;
 		
-		stageRenderer.setStage(stage);
+		newStage.metadata = &context.stageMetadata;
+		
+		stageRenderer.setStage(newStage);
 	}
 	
 	/++
@@ -147,7 +153,7 @@ class MazeEditorScreen : GameScreen {
 	void saveStage() {
 		import std.file;
 		
-		auto stageRoot = stage.serialize();
+		auto stageRoot = context.stage.serialize();
 		auto fileData = stageRoot.toJSON();
 		
 		mkdirRecurse(EDITOR_DIRECTORY);
@@ -159,23 +165,26 @@ class MazeEditorScreen : GameScreen {
 	 +/
 	void testStage() {
 		// Create a copy to test on
-		auto stageCopy = stage.clone();
+		auto stageCopy = context.stage.clone();
 		
 		// Set up the maze screen to play the stage
 		auto mazeScreen = new MazeScreen(game);
 		mazeScreen.setStage(stageCopy);
 		mazeScreen.onQuit ~= { game.nextScreen = this; };
-		mazeScreen.onRestart ~= { mazeScreen.setStage(this.stage.clone()); };
+		mazeScreen.onRestart ~= {
+			auto stageCopy = context.stage.clone();
+			mazeScreen.setStage(stageCopy);
+		};
 		game.nextScreen = mazeScreen;
 	}
 	
 	override void appear() {
-		// If no stage is loaded in the editor, load the editor settings
+		// If no context is loaded in the editor, load the editor settings
 		// screen instead
-		if(stage is null)
+		if(context is null)
 			game.nextScreen = new MazeEditorSettingsScreen(game, this);
 		else
-			game.subtitle = stageMetadata.title;
+			game.subtitle = context.stageMetadata.title;
 	}
 	
 	override void cycle(in InputState input, in float delta) {
@@ -235,22 +244,7 @@ class MazeEditorScreen : GameScreen {
 		
 		// Updating selected block & object
 		if(toolset.activeTool == selectionTool) {
-			if(input.wasButtonTurnedOn(SELECT_BUTTON)) {
-				selectedBlock = gridPointer.current;
-				auto objects = stage.getObjects(selectedBlock);
-				if(objects.length > 0) {
-					selectedObject = objects[0].getEditable(stage);
-				} else {
-					selectedObject = null;
-				}
-			} else if(input.isButtonOn(SELECT_BUTTON)) {
-				// Drag selected object
-				if(selectedObject && gridPointer.hasMoved) {
-					auto targetBlock = selectedBlock + gridPointer.movement;
-					selectedObject.drag(selectedBlock, targetBlock);
-					selectedBlock = targetBlock;
-				}
-			}
+			checkSelectionTool(input, delta);
 		} else if(toolset.activeTool == wallTool) {
 			if(input.wasButtonTurnedOn(SELECT_BUTTON)) {
 				// Start constructing a new wall
@@ -261,6 +255,9 @@ class MazeEditorScreen : GameScreen {
 				// Add blocks to the wall
 				if(wallInConstruction && gridPointer.hasMoved) {
 					import std.algorithm;
+					
+					if(!wallInConstruction)
+						return;
 					
 					// Reset new wall blocks
 					wallInConstruction.destroyBlocks();
@@ -281,12 +278,15 @@ class MazeEditorScreen : GameScreen {
 					stageRenderer.updateConstructionCache();
 				}
 			} else if(input.wasButtonTurnedOff(SELECT_BUTTON)) {
+				if(!wallInConstruction)
+					return;
+				
 				// Finish constructing wall
-				stage.walls ~= wallInConstruction;
+				context.stage.walls ~= wallInConstruction;
 				
 				// Select new wall
 				selectedBlock = wallInConstruction.getBlocks()[0];
-				selectedObject = wallInConstruction.getEditable(stage);
+				selectedObject = wallInConstruction.getEditable(context);
 				wallInConstruction = null;
 				
 				// Update wall cache
@@ -298,10 +298,10 @@ class MazeEditorScreen : GameScreen {
 				// Add a new pusher
 				auto newPusher = new Pusher();
 				newPusher.position = gridPointer.current;
-				stage.pushers ~= newPusher;
+				context.stage.pushers ~= newPusher;
 				
 				// Select pusher
-				selectedObject = newPusher.getEditable(stage);
+				selectedObject = newPusher.getEditable(context);
 				selectedBlock = newPusher.position;
 				
 				// Switch to selection mode
@@ -313,10 +313,10 @@ class MazeEditorScreen : GameScreen {
 				// Add a new pusher
 				auto newExit = new Exit();
 				newExit.position = gridPointer.current;
-				stage.exits ~= newExit;
+				context.stage.exits ~= newExit;
 				
 				// Select pusher
-				selectedObject = newExit.getEditable(stage);
+				selectedObject = newExit.getEditable(context);
 				selectedBlock = newExit.position;
 				
 				// Switch to selection mode
@@ -352,6 +352,52 @@ class MazeEditorScreen : GameScreen {
 		renderTarget.draw(toolsetAnchor);
 	}
 	
+	void checkSelectionTool(in InputState input, in float delta) {
+		if(input.wasButtonTurnedOn(SELECT_BUTTON)) {
+			// Select something
+			selectedBlock = gridPointer.current;
+			auto objects = context.stage.getObjects(selectedBlock);
+			if(objects.length > 0) {
+				selectedObject = objects[0].getEditable(context);
+			} else {
+				selectedObject = null;
+			}
+		} else if(input.isButtonOn(SELECT_BUTTON)) {
+			// Drag selected object
+			// Can only drag if there is something selected
+			bool dragStuff = !(selectedObject is null);
+			// And only when the mouse has moved from a grid block to another
+			dragStuff &= gridPointer.hasMoved;
+			// And only if that block is not the currently selected block
+			dragStuff &= selectedBlock != gridPointer.current;
+			
+			// Try to start grabbing mode by grabbing the object
+			if(dragStuff && !draggingMode) {
+				if(selectedObject.grab(selectedBlock)) {
+					draggingMode = true;
+				} else {
+					// Didn't grab, won't drag
+					dragStuff = false;
+				}
+			}
+			
+			// Finally drag something around
+			if(dragStuff) {
+				immutable auto fromBlock = selectedBlock;
+				immutable auto toBlock = gridPointer.current;
+				Point offset;
+				selectedObject.drag(fromBlock, toBlock, offset);
+				// Move selection
+				selectedBlock += offset;
+			}
+		} else if(input.wasButtonTurnedOff(SELECT_BUTTON)) {
+			if(selectedObject)
+				selectedObject.drop(selectedBlock);
+			
+			draggingMode = false;
+		}
+	}
+	
 	/++
 	 + Removes the currently selected object.
 	 + Returns whether it was removed.
@@ -369,17 +415,8 @@ class MazeEditorScreen : GameScreen {
 	 + Removes an object from the stage.
 	 + Returns whether it was removed.
 	 +/
-	bool trash(EditableStageObject object) {
-		int previousWallCount = stage.walls.length;
-		if(selectedObject.deleteFromStage()) {
-			// Update wall cache if removing the object affected the wall count
-			if(stage.walls.length != previousWallCount) {
-				stageRenderer.updateCachedWalls();
-			}
-			return true;
-		} else {
-			return false;
-		}
+	bool trash(EditableStageObject trashedObject) {
+		return trashedObject.deleteFromStage();
 	}
 }
 
@@ -408,6 +445,13 @@ class MazeEditorStageRenderer : StageRenderer {
 			super.renderWalls(constructionCache, target);
 		}
 	}
+}
+
+class EditingContext {
+	Stage stage;
+	StageInfo stageMetadata;
+	MazeEditorScreen editorScreen;
+	MazeEditorStageRenderer stageRenderer;
 }
 
 /++
@@ -654,7 +698,8 @@ class MazeEditorSettingsScreen : GameScreen {
 		
 		auto mainMenu = new Menu();
 		
-		if(!(editorScreen.stage is null)) {
+		// Has an editing context = has a stage loaded
+		if(!(editorScreen.context is null)) {
 			// Close settings
 			auto closeSettings = { game.nextScreen = editorScreen; };
 			auto closeMenuItem = menuContext.createMenuItem("Close");
