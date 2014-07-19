@@ -22,6 +22,33 @@ class Stage {
 		return chain(pushers, walls, exits);
 	}
 	
+	bool remove(StageObject object) {
+		import std.algorithm : countUntil;
+		import std.array : remove;
+		
+		auto pusherIndex = pushers.countUntil(object);
+		auto wallIndex = walls.countUntil(object);
+		auto exitIndex = exits.countUntil(object);
+		
+		import std.stdio;
+		writeln("P ", pusherIndex);
+		writeln("W ", wallIndex);
+		writeln("E ", exitIndex);
+		
+		if(pusherIndex >= 0) {
+			pushers = pushers.remove(pusherIndex);
+		}
+		else if(wallIndex >= 0) {
+			walls = walls.remove(wallIndex);
+		}
+		else if(exitIndex >= 0) {
+			exits = exits.remove(exitIndex);
+		} else {
+			return false;
+		}
+		return true;
+	}
+	
 	Exit getExit(in Point point) pure {
 		foreach(Exit exit; exits) {
 			if(exit.position == point) {

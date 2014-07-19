@@ -20,7 +20,7 @@ interface StageObject {
 	/++
 	 + Creates an EditableStageObject for this object.
 	 +/
-	EditableStageObject getEditable();
+	EditableStageObject getEditable(Stage stage);
 	
 	/++
 	 + Returns the points where this object is.
@@ -125,6 +125,11 @@ interface EditableStageObject {
 	StageObject getOwner();
 	
 	void drag(Point from, Point to);
+	
+	/++
+	 + Remove this object from the stage.
+	 +/
+	bool deleteFromStage();
 }
 
 /++
@@ -136,8 +141,8 @@ abstract class SimpleStageObject : StageObject {
 	bool grabbable, obstacle;
 	Pusher grabber;
 	
-	SimpleEditableStageObject getEditable() {
-		return new SimpleEditableStageObject(this);
+	SimpleEditableStageObject getEditable(Stage stage) {
+		return new SimpleEditableStageObject(this, stage);
 	}
 	
 	const(Point[]) getBlocks() { return SINGLE_BLOCK_ARRAY; }
@@ -189,9 +194,11 @@ abstract class SimpleStageObject : StageObject {
  +/
 class SimpleEditableStageObject : EditableStageObject {
 	SimpleStageObject owner;
+	Stage stage;
 	
-	this(SimpleStageObject owner) {
+	this(SimpleStageObject owner, Stage stage) {
 		this.owner = owner;
+		this.stage = stage;
 	}
 	
 	void drag(Point from, Point to) {
@@ -200,6 +207,10 @@ class SimpleEditableStageObject : EditableStageObject {
 	
 	SimpleStageObject getOwner() {
 		return owner;
+	}
+	
+	bool deleteFromStage() {
+		return stage.remove(owner);
 	}
 }
 

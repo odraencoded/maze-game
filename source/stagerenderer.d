@@ -20,10 +20,18 @@ class StageRenderer : Drawable {
 		this.stage = stage;
 		
 		// Cache walls
+		updateCachedWalls();
+	}
+	
+	void updateCachedWalls() {
+		updateCachedWalls(stage.walls, cachedWallSprites);
+	}
+	
+	protected void updateCachedWalls(Wall[] walls, ref VertexCache[Wall] cache) {
+		cache.clear();
 		auto wallMap = gameAssets.maps[Asset.WallMap];
-		cachedWallSprites.clear();
-		foreach(Wall aWall; stage.walls) {
-			cachedWallSprites[aWall] = aWall.createSpriteCache(wallMap);
+		foreach(Wall aWall; walls) {
+			cache[aWall] = aWall.createSpriteCache(wallMap);
 		}
 	}
 	
@@ -43,12 +51,16 @@ class StageRenderer : Drawable {
 	}
 	
 	protected void renderExits(RenderTarget renderTarget) {
+		renderExits(stage.exits, renderTarget);
+	}
+	
+	protected void renderExits(Exit[] exits, RenderTarget renderTarget) {
 		// Draw exits
 		auto exitSpriteMap = gameAssets.maps[Asset.GroundMap];
 		auto exitSprite = new TileSprite();
 		exitSprite.texture = &gameAssets.textures[Asset.GroundTexture];
 		exitSprite.piece = exitSpriteMap[GroundMapKeys.Exit];
-		foreach(Exit exit; stage.exits) {
+		foreach(Exit exit; exits) {
 			if(!isVisible(exit))
 				continue;
 			
@@ -58,12 +70,16 @@ class StageRenderer : Drawable {
 	}
 	
 	protected void renderPushers(RenderTarget renderTarget) {
+		renderPushers(stage.pushers, renderTarget);
+	}
+	
+	protected void renderPushers(Pusher[] pushers, RenderTarget renderTarget) {
 		// Draw player
 		auto pusherSpriteMap = gameAssets.maps[Asset.PusherMap];
 		auto pusherSprite = new TileSprite();
 		pusherSprite.texture = &gameAssets.textures[Asset.PusherTexture];
 		
-		foreach(Pusher pusher; stage.pushers) {
+		foreach(Pusher pusher; pushers) {
 			if(!isVisible(pusher))
 				continue;
 			
@@ -77,11 +93,14 @@ class StageRenderer : Drawable {
 	}
 	
 	protected void renderWalls(RenderTarget target) {
+		renderWalls(cachedWallSprites, target);
+	}
+	
+	protected void renderWalls(VertexCache[Wall] walls, RenderTarget target) {
 		Texture* currentTexture;
-		
 		// Render wall background
 		currentTexture = &gameAssets.textures[Asset.WallBackgroundTexture];
-		foreach(Wall aWall, VertexCache aCache; cachedWallSprites) {
+		foreach(Wall aWall, VertexCache aCache; walls) {
 			aCache.position = aWall.position * BLOCK_SIZE;
 			aCache.texture = currentTexture;
 			target.draw(aCache);
@@ -89,7 +108,7 @@ class StageRenderer : Drawable {
 		
 		// Render wall foregronud
 		currentTexture = &gameAssets.textures[Asset.WallForegroundTexture];
-		foreach(Wall aWall, VertexCache aCache; cachedWallSprites) {
+		foreach(Wall aWall, VertexCache aCache; walls) {
 			aCache.texture = currentTexture;
 			target.draw(aCache);
 		}
@@ -97,7 +116,7 @@ class StageRenderer : Drawable {
 		// Render wall outline
 		currentTexture = &gameAssets.textures[Asset.WallOutlineTexture];
 		VertexCache[] grabbedWalls;
-		foreach(Wall aWall, VertexCache aCache; cachedWallSprites) {
+		foreach(Wall aWall, VertexCache aCache; walls) {
 			if(aWall.isGrabbable) {
 				aCache.texture = currentTexture;
 				

@@ -46,9 +46,19 @@ class DisplayAnchor(T) : Drawable {
 		this.anchoredObject = anchoredObject;
 	}
 	
-	void draw(RenderTarget renderTarget, RenderStates states) {
+	/++
+	 + Converts a point from view coordinates to
+	 + the anchored object coordinates
+	 +/
+	Vector2!T convertPoint(Vector2!T point, Vector2!T viewSize) {
+		return point - getOffset(viewSize);
+	}
+	
+	/++
+	 + Returns the translation used to achieve the anchored effect for viewSize
+	 +/
+	Vector2!T getOffset(in Vector2!T viewSize) {
 		// Get view anchor
-		auto viewSize = renderTarget.view.size.toVector2!T;
 		auto viewAnchor = side.getAnchor!T(0, 0, viewSize.x, viewSize.y);
 		
 		// Get object anchor
@@ -59,8 +69,16 @@ class DisplayAnchor(T) : Drawable {
 		// Get margin anchor
 		auto marginAnchor = side.getAnchor!T(-margin, margin);
 		
-		auto finalAnchor = viewAnchor - objAnchor - marginAnchor;
-		states.transform.translate(finalAnchor.x, finalAnchor.y);		
+		// Return anchor combination
+		return viewAnchor - objAnchor - marginAnchor;
+	}
+	
+	void draw(RenderTarget renderTarget, RenderStates states) {
+		// Get view anchor
+		auto viewSize = renderTarget.view.size.toVector2!T;
+		auto offset = getOffset(viewSize);
+		
+		states.transform.translate(offset.x, offset.y);
 		renderTarget.draw(anchoredObject, states);
 	}
 }

@@ -272,5 +272,8 @@ private void loadAssets(Game mazeGame) {
 		assets.maps[Asset.ToolsMap] = toolsMap;
 		
 		toolsMap.addPiece(ToolsMapKeys.SelectionTool, Point(0, 2));
+		toolsMap.addPiece(ToolsMapKeys.WallTool, Point(1, 2));
+		toolsMap.addPiece(ToolsMapKeys.PusherTool, Point(2, 2));
+		toolsMap.addPiece(ToolsMapKeys.ExitTool, Point(3, 2));
 	}
 }

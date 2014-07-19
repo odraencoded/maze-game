@@ -26,16 +26,17 @@ class MazeEditorScreen : GameScreen {
 	StageInfo stageMetadata;
 	
 	Signal!(MazeEditorScreen) onQuit;
-	StageRenderer stageRenderer;
+	MazeEditorStageRenderer stageRenderer;
 	
 	EditingToolSet toolset;
 	EditingToolSet.Anchor toolsetAnchor;
 	
-	EditingTool selectionTool;
+	EditingTool selectionTool, wallTool, pusherTool, exitTool;
 	
 	Point selectedBlock;
 	MovingPoint gridPointer;
 	EditableStageObject selectedObject;
+	Wall wallInConstruction;
 	
 	TileSprite cursorSprite;
 	Point panning;
@@ -52,7 +53,16 @@ class MazeEditorScreen : GameScreen {
 		selectionTool = new EditingTool();
 		selectionTool.icon = toolsMap[ToolsMapKeys.SelectionTool];
 		
-		toolset.tools ~= selectionTool;
+		wallTool = new EditingTool();
+		wallTool.icon = toolsMap[ToolsMapKeys.WallTool];
+		
+		pusherTool = new EditingTool();
+		pusherTool.icon = toolsMap[ToolsMapKeys.PusherTool];
+		
+		exitTool = new EditingTool();
+		exitTool.icon = toolsMap[ToolsMapKeys.ExitTool];
+		
+		toolset.tools = [selectionTool, wallTool, pusherTool, exitTool];
 		
 		toolset.activeTool = selectionTool;
 		
@@ -60,7 +70,7 @@ class MazeEditorScreen : GameScreen {
 		toolsetAnchor.side = Side.TopAndRight;
 		toolsetAnchor.margin = Point(8, 8);
 		
-		stageRenderer = new StageRenderer(gameAssets);
+		stageRenderer = new MazeEditorStageRenderer(gameAssets, this);
 		
 		// Create cursor sprite
 		cursorSprite = new TileSprite();
@@ -170,6 +180,31 @@ class MazeEditorScreen : GameScreen {
 			return;
 		}
 		
+		// Whether mouse events go to stage editing
+		// e.g. no clicks on buttons or toolbars
+		bool hoveringStage = true;
+		
+		immutable auto pointer = input.pointer.current;
+		immutable auto gameSize = game.view.size.toVector2!int;
+		auto toolsetPoint = toolsetAnchor.convertPoint(pointer, gameSize);
+		auto highlightTool = toolset.getToolAt(toolsetPoint);
+		toolset.setHightlight(highlightTool);
+		
+		hoveringStage = !toolset.isUnderPoint(toolsetPoint);
+		
+		if(input.wasButtonTurnedOn(SELECT_BUTTON)) {
+			// Sets the active tool on click
+			if(!(highlightTool is null)) {
+				toolset.setActive(highlightTool);
+			}
+		}
+		
+		if(hoveringStage) {
+			checkStageInput(input, delta);
+		}
+	}
+	
+	void checkStageInput(in InputState input, in float delta) {
 		// Drag the view while the view dragging mouse button is being held.
 		// == On means it must have been TurnedOn before this cycle, so
 		// it's the button has been held for at least two cycles
@@ -182,20 +217,83 @@ class MazeEditorScreen : GameScreen {
 		gridPointer.move(viewPointer.getGridPoint(BLOCK_SIZE));
 		
 		// Updating selected block & object
-		if(input.wasButtonTurnedOn(SELECT_BUTTON)) {
-			selectedBlock = gridPointer.current;
-			auto objects = stage.getObjects(selectedBlock);
-			if(objects.length > 0) {
-				selectedObject = objects[0].getEditable();
-			} else {
-				selectedObject = null;
+		if(toolset.activeTool == selectionTool) {
+			if(input.wasButtonTurnedOn(SELECT_BUTTON)) {
+				selectedBlock = gridPointer.current;
+				auto objects = stage.getObjects(selectedBlock);
+				if(objects.length > 0) {
+					selectedObject = objects[0].getEditable(stage);
+				} else {
+					selectedObject = null;
+				}
+			} else if(input.isButtonOn(SELECT_BUTTON)) {
+				// Drag selected object
+				if(selectedObject && gridPointer.hasMoved) {
+					auto targetBlock = selectedBlock + gridPointer.movement;
+					selectedObject.drag(selectedBlock, targetBlock);
+					selectedBlock = targetBlock;
+				}
 			}
-		} else if(input.isButtonOn(SELECT_BUTTON)) {
-			// Drag selected object
+		} else if(toolset.activeTool == wallTool) {
+			if(input.wasButtonTurnedOn(SELECT_BUTTON)) {
+				// Start constructing a new wall
+				wallInConstruction = new Wall();
+				wallInConstruction.glueBlock(gridPointer.current);
+				stageRenderer.updateConstructionCache();
+			} else if(input.isButtonOn(SELECT_BUTTON)) {
+				// Add blocks to the wall
+				if(wallInConstruction && gridPointer.hasMoved) {
+					wallInConstruction.glueBlock(gridPointer.current);
+					stageRenderer.updateConstructionCache();
+				}
+			} else if(input.wasButtonTurnedOff(SELECT_BUTTON)) {
+				// Finish constructing wall
+				stage.walls ~= wallInConstruction;
+				stageRenderer.updateCachedWalls();
+				
+				wallInConstruction = null;
+				stageRenderer.updateConstructionCache();
+			}
+		} else if(toolset.activeTool == pusherTool) {
+			if(input.wasButtonTurnedOn(SELECT_BUTTON)) {
+				// Add a new pusher
+				auto newPusher = new Pusher();
+				newPusher.position = gridPointer.current;
+				stage.pushers ~= newPusher;
+				
+				// Select pusher
+				selectedObject = newPusher.getEditable(stage);
+				selectedBlock = newPusher.position;
+				
+				// Switch to selection mode
+				toolset.setActive(selectionTool);
+			}
+		}
+		else if(toolset.activeTool == exitTool) {
+			if(input.wasButtonTurnedOn(SELECT_BUTTON)) {
+				// Add a new pusher
+				auto newExit = new Exit();
+				newExit.position = gridPointer.current;
+				stage.exits ~= newExit;
+				
+				// Select pusher
+				selectedObject = newExit.getEditable(stage);
+				selectedBlock = newExit.position;
+				
+				// Switch to selection mode
+				toolset.setActive(selectionTool);
+			}
+		}
+		
+		if(input.wasKeyTurnedOn(Keyboard.Key.Delete)) {
 			if(selectedObject) {
-				immutable auto targetBlock = selectedBlock + gridPointer.movement;
-				selectedObject.drag(selectedBlock, targetBlock);
-				selectedBlock = targetBlock;
+				int previousWallCount = stage.walls.length;
+				if(selectedObject.deleteFromStage()) {
+					selectedObject = null;
+					if(stage.walls.length != previousWallCount) {
+						stageRenderer.updateCachedWalls();
+					}
+				}
 			}
 		}
 	}
@@ -224,18 +322,48 @@ class MazeEditorScreen : GameScreen {
 	}
 }
 
+class MazeEditorStageRenderer : StageRenderer {
+	import mazescreen;
+	
+	MazeEditorScreen screen;
+	VertexCache[Wall] constructionCache;
+	
+	this(GameAssets assets, MazeEditorScreen screen) {
+		super(assets);
+		this.screen = screen;
+	}
+	
+	void updateConstructionCache() {
+		if(screen.wallInConstruction) {
+			updateCachedWalls([screen.wallInConstruction], constructionCache);
+		} else {
+			constructionCache.clear();
+		}
+	}
+	
+	override protected void renderWalls(RenderTarget target) {
+		super.renderWalls(target);
+		if(screen.wallInConstruction) {
+			super.renderWalls(constructionCache, target);
+		}
+	}
+}
+
 /++
  + A set of tools.
  +/
 class EditingToolSet : DisplayObject!int {// : DisplayObject(int) {
-	enum TOOL_WIDTH = BLOCK_SIZE;
-	enum TOOL_HEIGHT = BLOCK_SIZE;
+	enum TOOL_WIDTH = 16;
+	enum TOOL_HEIGHT = 16;
+	enum VERTICAL_PADDING = 0;
+	enum BORDER_WIDTH = 1;
 	
 	GameAssets assets;
 	
 	EditingTool[] tools;
-	EditingTool activeTool;
-	VertexCache backgroundCache, iconCache;
+	EditingTool activeTool, highlightTool;
+	VertexCache backgroundCache, iconCache, selectionCache;
+	VertexCache highlightCache, selectionHighlightCache;
 	
 	uint width = 1;
 	
@@ -243,10 +371,83 @@ class EditingToolSet : DisplayObject!int {// : DisplayObject(int) {
 		this.assets = assets;
 	}
 	
+	/++
+	 + Returns the tool at point p
+	 +/
+	EditingTool getToolAt(Point p) {
+		enum FULL_HEIGHT = TOOL_HEIGHT + VERTICAL_PADDING * 2 + BORDER_WIDTH;
+		
+		Point boxSize = getBottomRight();
+		
+		// Check if contained in the active tool sprite
+		if(activeTool) {
+			auto activeY = selectionCache.position.y;
+			if(p.x >= -1 && p.y >= activeY - 1 && p.x < boxSize.x + 1) {
+				if(p.y < activeY + TOOL_HEIGHT - BORDER_WIDTH + 1) {
+					return activeTool;
+				}
+			}
+		}
+		
+		// Check if contained in the toolbar
+		if(p.x < boxSize.x && p.y < boxSize.y && p.x >= 0 && p.y >= 0) {
+			if((p.y % FULL_HEIGHT) < FULL_HEIGHT - BORDER_WIDTH) {
+				int highlightIndex = p.y / FULL_HEIGHT;
+				return tools[highlightIndex];
+			}
+		}
+		
+		// Not found
+		return null;
+	}
+	
+	/++
+	 + Sets the highlighted tool
+	 +/
+	void setHightlight(EditingTool tool) {
+		highlightTool = tool;
+		if(!(highlightTool is null)) {
+			import std.algorithm : countUntil;
+			int highlightIndex = tools.countUntil(highlightTool);
+			highlightCache.position.y = getY(highlightIndex);
+			selectionHighlightCache.position.y = highlightCache.position.y;
+		}
+	}
+	
+	/++
+	 + Sets the highlighted tool
+	 +/
+	void setActive(EditingTool tool) {
+		activeTool = tool;
+		if(!(activeTool is null)) {
+			import std.algorithm : countUntil;
+			int activeIndex = tools.countUntil(activeTool);
+			selectionCache.position.y = getY(activeIndex);
+			selectionHighlightCache.position.y = selectionCache.position.y;
+		}
+	}
+	
+	int getY(int index) const pure {
+		int result;
+		
+		int rowCount = index / width;
+		// Rounding up. Too lazy to convert to float, get std.math, etc.
+		if(tools.length % width > 0)
+			rowCount += 1;
+		
+		result = TOOL_HEIGHT * rowCount;
+		result += VERTICAL_PADDING * rowCount * 2;
+		result += BORDER_WIDTH * rowCount;
+		
+		return result;
+	}
+	
 	void updateCache() {
 		// Cache background
 		enum OUTLINE_COLOR = Color(0, 0, 0);
 		enum FACE_COLOR = Color(231, 220, 193);
+		enum BORDER_COLOR = Color(0, 0, 0, 64);
+		enum HIGHLIGHT_COLOR = Color(255, 255, 255);
 		
 		auto boxSize = getBottomRight();
 		
@@ -262,19 +463,81 @@ class EditingToolSet : DisplayObject!int {// : DisplayObject(int) {
 		backgroundCache.add(outlineVertices);
 		backgroundCache.add(faceVertices);
 		
-		// Cache icons
+		// Cache selection sprite
+		outlineRect = FloatRect(-2, -2, TOOL_WIDTH + 4, TOOL_HEIGHT + 4);
+		outlineVertices = outlineRect.toVertexArray();
+		outlineVertices.dye(OUTLINE_COLOR);
+		
+		faceRect = IntRect(-1, -1, TOOL_WIDTH + 2, TOOL_HEIGHT + 2);
+		faceVertices = faceRect.toVertexArray();
+		faceVertices.dye(FACE_COLOR);
+		
+		selectionCache = new VertexCache();
+		selectionCache.add(outlineVertices);
+		selectionCache.add(faceVertices);
+		
+		// Cache selection highlight sprite
+		auto highlightVertices = faceRect.toVertexArray();
+		highlightVertices.dye(HIGHLIGHT_COLOR);
+		
+		selectionHighlightCache = new VertexCache();
+		selectionHighlightCache.add(highlightVertices);
+		
+		// Create highlight sprite
+		faceRect = IntRect(0, 0, TOOL_WIDTH, TOOL_HEIGHT);
+		highlightVertices = faceRect.toVertexArray();
+		highlightVertices.dye(HIGHLIGHT_COLOR);
+		
+		highlightCache = new VertexCache();
+		highlightCache.add(highlightVertices);
+		
+		// Cache icons, create border vertices
+		Vertex[] borderVertices;
+		
 		iconCache = new VertexCache();
 		iconCache.texture = &assets.textures[Asset.ToolsTexture];
+		int toolY = -BORDER_WIDTH;
 		foreach(int i, ref EditingTool tool; tools) {
-			iconCache.add(tool.icon.vertices, Point(0, i * TOOL_HEIGHT));
+			if(i > 0) {
+				auto borderRect = IntRect(0, toolY, boxSize.x, BORDER_WIDTH);
+				borderVertices ~= borderRect.toVertexArray();
+			}
+			toolY += BORDER_WIDTH + VERTICAL_PADDING;
+			
+			if(tool == activeTool)
+				selectionCache.position.y = toolY;
+			
+			iconCache.add(tool.icon.vertices, Point(0, toolY));
+			toolY += TOOL_HEIGHT + VERTICAL_PADDING;
 		}
+		
+		borderVertices.dye(BORDER_COLOR);
+		backgroundCache.add(borderVertices);
 	}
 	
 	override void draw(RenderTarget renderTarget, RenderStates states) {
 		if(backgroundCache is null)
 			updateCache();
 		
+		// Draw background
 		renderTarget.draw(backgroundCache, states);
+		
+		// Draw highlight sprite
+		if(!(highlightTool is null) && !(highlightTool is activeTool)) {
+			renderTarget.draw(highlightCache, states);
+		}
+		
+		// Draw selection sprite
+		if(!(activeTool is null)) {
+			renderTarget.draw(selectionCache, states);
+			
+			// Draw highlight sprite
+			if(highlightTool is activeTool) {
+				renderTarget.draw(selectionHighlightCache, states);
+			}
+		}
+		
+		// Draw icons on top of everything
 		renderTarget.draw(iconCache, states);
 	}
 	
@@ -286,13 +549,30 @@ class EditingToolSet : DisplayObject!int {// : DisplayObject(int) {
 	Point getBottomRight() {
 		Point size;
 		size.x = width * TOOL_WIDTH;
-		size.y = TOOL_HEIGHT * (tools.length / width);
-		
-		// Rounding up. Too lazy to convert to float, get std.math, etc.
-		if(tools.length % width > 0)
-			size.y += TOOL_HEIGHT;
+		size.y = getY(tools.length) - BORDER_WIDTH;
 		
 		return size;
+	}
+	
+	bool isUnderPoint(Point p) {
+		immutable auto tl = getTopLeft();
+		immutable auto br = getBottomRight();
+		
+		// Check if inside bar
+		if(p.x >= tl.x && p.x < br.x && p.y >= tl.y && p.y < br.y)
+			return true;
+		
+		// Check if contained in the active tool sprite
+		if(activeTool) {
+			auto activeY = selectionCache.position.y;
+			if(p.x >= tl.x - 1 && p.y >= activeY - 1 && p.x < br.x + 1) {
+				if(p.y < activeY + TOOL_HEIGHT - BORDER_WIDTH + 1) {
+					return true;
+				}
+			}
+		}
+		
+		return false;
 	}
 }
 

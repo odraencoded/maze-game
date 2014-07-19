@@ -96,5 +96,5 @@ enum SymbolMapKeys {
 }
 
 enum ToolsMapKeys {
-	SelectionTool
+	SelectionTool, WallTool, PusherTool, ExitTool
 }
