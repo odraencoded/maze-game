@@ -351,6 +351,14 @@ class Wall : SimpleStageObject {
 	}
 	
 	/++
+	 + Removes all blocks from this wall
+	 +/
+	void destroyBlocks() {
+		blocks.clear();
+		blockPoints = null;
+	}
+	
+	/++
 	 + Adds a block to the wall attaching the surrounding blocks to it
 	 +/
 	void glueBlock(in Point point) {

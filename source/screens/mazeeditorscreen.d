@@ -33,7 +33,7 @@ class MazeEditorScreen : GameScreen {
 	
 	EditingTool selectionTool, trashTool, wallTool, pusherTool, exitTool;
 	
-	Point selectedBlock;
+	Point selectedBlock, gridDragStart;
 	MovingPoint gridPointer;
 	EditableStageObject selectedObject;
 	Wall wallInConstruction;
@@ -228,6 +228,11 @@ class MazeEditorScreen : GameScreen {
 		immutable auto viewPointer = input.pointer.current + panning;
 		gridPointer.move(viewPointer.getGridPoint(BLOCK_SIZE));
 		
+		// Set where the drag started
+		if(input.wasButtonTurnedOn(SELECT_BUTTON)) {
+			gridDragStart = gridPointer.current;
+		}
+		
 		// Updating selected block & object
 		if(toolset.activeTool == selectionTool) {
 			if(input.wasButtonTurnedOn(SELECT_BUTTON)) {
@@ -255,15 +260,37 @@ class MazeEditorScreen : GameScreen {
 			} else if(input.isButtonOn(SELECT_BUTTON)) {
 				// Add blocks to the wall
 				if(wallInConstruction && gridPointer.hasMoved) {
-					wallInConstruction.glueBlock(gridPointer.current);
+					import std.algorithm;
+					
+					// Reset new wall blocks
+					wallInConstruction.destroyBlocks();
+					
+					// Create wall blocks in shape of a rectangle from
+					// the start of the drag until the current point
+					int left = min(gridDragStart.x, gridPointer.current.x);
+					int top = min(gridDragStart.y, gridPointer.current.y);
+					int right = max(gridDragStart.x, gridPointer.current.x);
+					int bottom = max(gridDragStart.y, gridPointer.current.y);
+					
+					foreach(int x; left..right + 1) {
+						foreach(int y; top..bottom + 1) {
+							wallInConstruction.glueBlock(Point(x, y));
+						}
+					}
+					
 					stageRenderer.updateConstructionCache();
 				}
 			} else if(input.wasButtonTurnedOff(SELECT_BUTTON)) {
 				// Finish constructing wall
 				stage.walls ~= wallInConstruction;
-				stageRenderer.updateCachedWalls();
 				
+				// Select new wall
+				selectedBlock = wallInConstruction.getBlocks()[0];
+				selectedObject = wallInConstruction.getEditable(stage);
 				wallInConstruction = null;
+				
+				// Update wall cache
+				stageRenderer.updateCachedWalls();
 				stageRenderer.updateConstructionCache();
 			}
 		} else if(toolset.activeTool == pusherTool) {
