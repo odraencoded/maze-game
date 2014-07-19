@@ -19,12 +19,19 @@ import tile;
 import utility : OnOffState;
 
 enum EDITOR_DIRECTORY = "editor" ~ slash;
+enum MAZE_EXTENSION = ".maze";
 
 enum SELECT_BUTTON = Mouse.Button.Left;
 enum DRAG_VIEW_BUTTON = Mouse.Button.Right;
 
+enum NEW_STAGE_TITLE = "New Stage";
+enum FALLBACK_STAGE_TITLE = "Untitled";
+enum FALLBACK_STAGE_FILENAME = EDITOR_DIRECTORY ~ slash ~ "untitled.maze";
+
 class MazeEditorScreen : GameScreen {
 	EditingContext context;
+	
+	string stageFilename;
 	
 	Signal!(MazeEditorScreen) onQuit;
 	MazeEditorStageRenderer stageRenderer;
@@ -100,9 +107,8 @@ class MazeEditorScreen : GameScreen {
 	/++
 	 + Sets a stage to be edited in the editor.
 	 +/
-	void setStage(Stage newStage, StageInfo newMetadata) {
-		if(isActiveScreen)
-			game.subtitle = newMetadata.title;
+	void setStage(Stage newStage, StageInfo newMetadata, string filename) {
+		stageFilename = filename;
 		
 		context = new EditingContext();
 		context.editorScreen = this;
@@ -113,6 +119,16 @@ class MazeEditorScreen : GameScreen {
 		newStage.metadata = &context.stageMetadata;
 		
 		stageRenderer.setStage(newStage);
+		
+		if(isActiveScreen) {
+			refreshSubtitle();
+		}
+		
+		panning = Point(0, 0);
+		selectedBlock = Point(0, 0);
+		selectedObject = null;
+		wallInConstruction = null;
+		draggingMode = false;
 	}
 	
 	/++
@@ -120,7 +136,7 @@ class MazeEditorScreen : GameScreen {
 	 +/
 	void setNewStage() {
 		auto newMetadata = new StageInfo();
-		newMetadata.title = "New Stage";
+		newMetadata.title = NEW_STAGE_TITLE;
 		
 		// Create default stage
 		auto newStage = new Stage();
@@ -150,21 +166,39 @@ class MazeEditorScreen : GameScreen {
 		defaultFrame.grabbable = false;
 		newStage.walls ~= defaultFrame;
 		
-		setStage(newStage, newMetadata);
+		setStage(newStage, newMetadata, null);
 	}
 	
 	/++
 	 + Saves the stage.
 	 +/
 	void saveStage() {
-		import std.file;
-		
-		auto stageRoot = context.stage.serialize();
-		auto fileData = stageRoot.toJSON();
-		
-		mkdirRecurse(EDITOR_DIRECTORY);
-		write(EDITOR_DIRECTORY ~ "stage.maze", fileData);
+		if(context) {
+			if(stageFilename is null) {
+				stageFilename = FALLBACK_STAGE_FILENAME;
+			}
+			
+			context.stage.saveToDisk(stageFilename);
+		}
 	}
+	
+	/++
+	 + Loads a stage from a file
+	 +/
+	void loadStage(string filename) {
+		StageInfo newMetadata;
+		Stage newStage;
+		
+		Stage.LoadStage(filename, newStage, newMetadata);
+		
+		if(newMetadata is null) {
+			newMetadata = new StageInfo();
+			newMetadata.title = FALLBACK_STAGE_TITLE;
+		}
+		
+		setStage(newStage, newMetadata, filename);
+	}
+	
 	
 	/++
 	 + Tests the current stage
@@ -185,12 +219,12 @@ class MazeEditorScreen : GameScreen {
 	}
 	
 	override void appear() {
+		refreshSubtitle();
+		
 		// If no context is loaded in the editor, load the editor settings
 		// screen instead
 		if(context is null)
 			game.nextScreen = new MazeEditorSettingsScreen(game, this);
-		else
-			game.subtitle = context.stageMetadata.title;
 	}
 	
 	override void cycle(in InputState input, in float delta) {
@@ -443,6 +477,19 @@ class MazeEditorScreen : GameScreen {
 	 +/
 	bool trash(EditableStageObject trashedObject) {
 		return trashedObject.deleteFromStage();
+	}
+	
+	void refreshSubtitle() {
+		import std.path;
+		if(context) {
+			if(stageFilename is null) {
+				game.subtitle = "New Maze";
+			} else {
+				game.subtitle = stageFilename.baseName;
+			}
+		} else { 
+			game.subtitle = "Editor";
+		}
 	}
 }
 
@@ -714,6 +761,7 @@ class EditingTool {
 class MazeEditorSettingsScreen : GameScreen {
 	MenuContext menuContext;
 	MazeEditorScreen editorScreen;
+	Menu mainMenu;
 	
 	this(Game game, MazeEditorScreen screen) {
 		super(game);
@@ -722,34 +770,44 @@ class MazeEditorSettingsScreen : GameScreen {
 		editorScreen = screen;
 		menuContext = new MenuContext(game.assets);
 		
-		auto mainMenu = new Menu();
+		mainMenu = new Menu();
 		
 		// Has an editing context = has a stage loaded
-		if(!(editorScreen.context is null)) {
+		if(editorScreen.context) {
 			// Close settings
-			auto closeSettings = { game.nextScreen = editorScreen; };
-			auto closeMenuItem = menuContext.createMenuItem("Close");
-			closeMenuItem.onActivate ~= closeSettings;
-			mainMenu.onCancel ~= closeSettings;
+			auto editMenuItem = menuContext.createMenuItem("Edit");
+			editMenuItem.onActivate ~= &closeSettings;
+			mainMenu.onCancel ~= &closeSettings;
 			
 			// Test stage
 			auto testMenuItem = menuContext.createMenuItem("Test Stage");
 			testMenuItem.onActivate ~= { editorScreen.testStage(); };
 			
-			// Save stage
-			auto saveMenuItem = menuContext.createMenuItem("Save Stage");
-			saveMenuItem.onActivate ~= { editorScreen.saveStage(); };
-			
-			mainMenu.items ~= [closeMenuItem, testMenuItem, saveMenuItem];
+			mainMenu.items ~= [editMenuItem, testMenuItem, null];
 		}
 		
 		// New stage item
 		auto newStageMenuItem = menuContext.createMenuItem("New Stage");
 		newStageMenuItem.onActivate ~= {
 			editorScreen.setNewStage();
-			game.nextScreen = editorScreen;
+			closeSettings();
 		};
 		mainMenu.items ~= newStageMenuItem;
+		
+		if(editorScreen.context) {
+			// Save stage
+			auto saveMenuItem = menuContext.createMenuItem("Save Stage");
+			saveMenuItem.onActivate ~= {
+				editorScreen.saveStage();
+				closeSettings();
+			};
+			mainMenu.items ~= saveMenuItem;
+		}
+		
+		// Load stage item
+		auto loadStageMenuItem = menuContext.createMenuItem("Load Stage");
+		loadStageMenuItem.onActivate ~= &showLoadMenu;
+		mainMenu.items ~= loadStageMenuItem;
 		
 		// Quit item
 		auto quitMenuItem = menuContext.createMenuItem("Quit");
@@ -781,5 +839,59 @@ class MazeEditorSettingsScreen : GameScreen {
 		
 		// Draw menu
 		renderTarget.draw(menuContext);
+	}
+	
+	void showMainMenu() {
+		menuContext.selection = 0;
+		menuContext.currentMenu = mainMenu;
+	}
+	
+	void showLoadMenu() {
+		import std.file;
+		import std.path;
+		
+		string[] mazeFilepaths ;
+		
+		// Fetch .maze file names
+		auto fileList = dirEntries(EDITOR_DIRECTORY, SpanMode.shallow);
+		foreach(DirEntry anEntry; fileList) {
+			if(anEntry.isFile) {
+				auto aFilepath = anEntry.name;
+				if(anEntry.name.extension == MAZE_EXTENSION) {
+					mazeFilepaths ~= aFilepath;
+				}
+			}
+		}
+		
+		// Create menu
+		auto loadMenu = new Menu();
+		loadMenu.onCancel ~= &showMainMenu;
+		
+		// Create menu items
+		string[MenuItem] mazeItemsPaths;
+		auto loadOneMazeMenuItem = (MenuItem item) {
+			auto aPath = mazeItemsPaths[item];
+			editorScreen.loadStage(aPath);
+			closeSettings();
+		};
+		
+		foreach(string aPath; mazeFilepaths) {
+			auto mazeMenuItem = menuContext.createMenuItem(aPath.baseName);
+			mazeItemsPaths[mazeMenuItem] = aPath;
+			mazeMenuItem.onActivate ~= loadOneMazeMenuItem;
+			loadMenu.items ~= [mazeMenuItem];
+		}
+		
+		auto cancelMenuItem = menuContext.createMenuItem("Cancel");
+		cancelMenuItem.onActivate ~= &showMainMenu;
+		
+		loadMenu.items ~= [null, cancelMenuItem];
+		
+		menuContext.selection = 0;
+		menuContext.currentMenu = loadMenu;
+	}
+	
+	void closeSettings() {
+		game.nextScreen = editorScreen;
 	}
 }

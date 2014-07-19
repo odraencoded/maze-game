@@ -68,10 +68,6 @@ private template getJsonValue(string type, string json_type, string method) {
 }
 
 mixin(getJsonValue!("string"           , "STRING"  , "str"));
-mixin(getJsonValue!("int"              , "INTEGER" , "integer"));
-mixin(getJsonValue!("uint"             , "UINTEGER", "uinteger"));
-mixin(getJsonValue!("long"             , "INTEGER" , "integer"));
-mixin(getJsonValue!("ulong"            , "UINTEGER", "uinteger"));
 mixin(getJsonValue!("float"            , "FLOAT"   , "floating"));
 mixin(getJsonValue!("JSONValue[string]", "OBJECT"  , "object"));
 mixin(getJsonValue!("JSONValue[]"      , "ARRAY"   , "array"));
@@ -79,6 +75,17 @@ mixin(getJsonValue!("JSONValue[]"      , "ARRAY"   , "array"));
 bool getJsonValue(JSONValue object, ref bool result) {
 	if(object.type == JSON_TYPE.TRUE)
 		result = true;
+	else if(object.type == JSON_TYPE.FALSE)
+		result = false;
+	else return false;
+	return true;
+}
+
+bool getJsonValue(JSONValue object, ref int result) {
+	if(object.type == JSON_TYPE.INTEGER)
+		result = cast(int)object.integer;
+	else if(object.type == JSON_TYPE.UINTEGER)
+		result = cast(int)object.uinteger;
 	else if(object.type == JSON_TYPE.FALSE)
 		result = false;
 	else return false;

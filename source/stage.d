@@ -167,7 +167,7 @@ class Stage {
 	 +/
 	Stage clone() {
 		// Most half-assed approach to the problem that still works.
-		auto result = loadStage(this.serialize());
+		auto result = Construct(this.serialize());
 		result.metadata = this.metadata;
 		return result;
 	}
@@ -175,7 +175,7 @@ class Stage {
 	/++
 	 + Serializes the stage into a JSON object 
 	 +/
-	JSONValue* serialize() const {
+	JSONValue serialize() const {
 		// Serializing pushers
 		JSONValue[] serializedPushers;
 		foreach(const Pusher aPusher; pushers) {
@@ -200,50 +200,107 @@ class Stage {
 		stageObjects[JSON_WALLS_ARRAY_KEY] = JSONValue(serializedWalls);
 		stageObjects[JSON_EXITS_ARRAY_KEY] = JSONValue(serializedExits);
 		
-		return new JSONValue(stageObjects);
+		return JSONValue(stageObjects);
+	}
+	
+	/++
+	 + Saves this stage and its metadata to disk
+	 +/
+	void saveToDisk(in string filepath) {
+		import std.file;
+		import std.path;
+		
+		mkdirRecurse(filepath.dirName);
+		
+		JSONValue[string] rootObjects;
+		
+		rootObjects["stage"] = this.serialize();
+		
+		// Serialize metadata
+		if(this.metadata) {
+			JSONValue[string] serializedMetadata;
+			serializedMetadata["title"] = this.metadata.title;
+			
+			rootObjects["metadata"] = serializedMetadata;
+		}
+		
+		auto root = JSONValue(rootObjects);
+		
+		// Write everything to disk
+		auto fileData = toJSON(&root);
+		write(filepath, fileData);
+	}
+	
+	/++
+	 + Loads a stage and its metadata from disk
+	 +/
+	static void LoadStage(
+		in string filename, out Stage stage, out StageInfo metadata
+	) {
+		import std.file;
+		auto json = parseJSON(readText(filename));
+		JSONValue[string] root;
+		
+		if(getJsonValue(json, root)) {
+			// Load metadata
+			JSONValue[string] serializedMetadata;
+			if(root.getJsonValue("metadata", serializedMetadata)) {
+				metadata = new StageInfo();
+				serializedMetadata.getJsonValue("title", metadata.title);
+			}
+			
+			JSONValue* stageRoot = "stage" in root;
+			if(stageRoot is null) {
+				throw new Exception("Could not load stage object.");
+			} else {
+				stage = Construct(*stageRoot);
+			}
+		} else {
+			throw new Exception("File is not a valid JSON object.");
+		}
+	}
+	
+	/++
+	 + Builds a stage out of a JSON node
+	 +/
+	static Stage Construct(JSONValue data) {
+		Stage result = new Stage();
+		
+		JSONValue[string] root;
+		if(!data.getJsonValue(root))
+			throw new Exception("Not a JSON object.");
+		
+		// Load pushers
+		JSONValue[] pushersData;
+		if(root.getJsonValue(JSON_PUSHERS_ARRAY_KEY, pushersData)) {
+			result.pushers.length = pushersData.length;
+			foreach(int i, ref JSONValue someData; pushersData) {
+				result.pushers[i] = Pusher.load(someData);
+			}
+		}
+		
+		// Load walls
+		JSONValue[] wallsData;
+		if(root.getJsonValue(JSON_WALLS_ARRAY_KEY, wallsData)) {
+			result.walls.length = wallsData.length;
+			foreach(int i, ref JSONValue someData; wallsData) {
+				result.walls[i] = Wall.load(someData);
+			}
+		}
+		
+		// Load exits
+		JSONValue[] exitsData;
+		if(root.getJsonValue(JSON_EXITS_ARRAY_KEY, exitsData)) {
+			result.exits.length = exitsData.length;
+			foreach(int i, ref JSONValue someData; exitsData) {
+				result.exits[i] = Exit.load(someData);
+			}
+		}
+		
+		return result;
 	}
 }
 
 class StageInfo {
 	string title;
-}
-
-/++
- + Builds a stage out of a JSON node
- +/
-Stage loadStage(JSONValue* json) {
-	Stage result = new Stage();
-	
-	JSONValue[string] root;
-	if(!getJsonValue(*json, root))
-		throw new Exception("Not a JSON object.");
-	
-	// Load pushers
-	JSONValue[] pushersData;
-	if(root.getJsonValue(JSON_PUSHERS_ARRAY_KEY, pushersData)) {
-		result.pushers.length = pushersData.length;
-		foreach(int i, ref JSONValue someData; pushersData) {
-			result.pushers[i] = Pusher.load(someData);
-		}
-	}
-	
-	// Load walls
-	JSONValue[] wallsData;
-	if(root.getJsonValue(JSON_WALLS_ARRAY_KEY, wallsData)) {
-		result.walls.length = wallsData.length;
-		foreach(int i, ref JSONValue someData; wallsData) {
-			result.walls[i] = Wall.load(someData);
-		}
-	}
-	
-	// Load exits
-	JSONValue[] exitsData;
-	if(root.getJsonValue(JSON_EXITS_ARRAY_KEY, exitsData)) {
-		result.exits.length = exitsData.length;
-		foreach(int i, ref JSONValue someData; exitsData) {
-			result.exits[i] = Exit.load(someData);
-		}
-	}
-	
-	return result;
 }

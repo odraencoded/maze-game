@@ -237,7 +237,7 @@ class Pusher : SimpleStageObject  {
 		
 		JSONValue[] someData;
 		json.getJsonValue(someData);
-		ulong facing;
+		int facing;
 		
 		getJsonValue(someData[0], result.position);
 		getJsonValue(someData[1], facing);
@@ -297,7 +297,7 @@ class Wall : SimpleStageObject {
 		
 		foreach(JSONValue aSerializedBlock; serializedBlocks) {
 			Point block;
-			ulong joints;
+			int joints;
 			getJsonValue(aSerializedBlock[0], block);
 			getJsonValue(aSerializedBlock[1], joints);
 			
