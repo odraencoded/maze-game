@@ -260,7 +260,18 @@ class MazeEditorScreen : GameScreen {
 		if(input.wasButtonTurnedOn(SELECT_BUTTON)) {
 			// Sets the active tool on click
 			if(highlightTool) {
-				toolset.setActive(highlightTool);
+				if(toolset.activeTool == highlightTool) {
+					// Double click, or rather, clicking twice
+					if(highlightTool == trashTool) {
+						trashSelection();
+					} else if(highlightTool == glueTool) {
+						glueSelection();
+					} else if(highlightTool == eraserTool) {
+						eraseSelection();
+					}
+				} else {
+					toolset.setActive(highlightTool);
+				}
 			}
 		}
 		
@@ -307,25 +318,14 @@ class MazeEditorScreen : GameScreen {
 			if(activateOnBlock) {
 				// Refresh selection
 				setSelection(gridPointer.current);
-				
-				// Toggle glued/unglued walls
-				if(selectedObject && selectedObject.canBeFixed) {
-					selectedObject.setFixed(!selectedObject.isFixed());
-				}
+				glueSelection();
 			}
 		} else if(toolset.activeTool == wallTool) {
 			checkWallTool(input, delta);
 		} else if(toolset.activeTool == eraserTool) {
 			if(activateOnBlock) {
 				setSelection(gridPointer.current);
-				
-				if(selectedObject) {
-					bool destroyed;
-					selectedObject.eraseBlock(selectedBlock, destroyed);
-					if(destroyed) {
-						selectedObject = null;
-					}
-				}
+				eraseSelection();
 			}
 		} else if(toolset.activeTool == pusherTool) {
 			if(input.wasButtonTurnedOn(SELECT_BUTTON)) {
@@ -526,6 +526,34 @@ class MazeEditorScreen : GameScreen {
 		} else {
 			return false;
 		}
+	}
+	
+	/++
+	 + Glue the selected object
+	 + Returns whether that was possible.
+	 +/
+	 bool glueSelection() {
+		if(selectedObject && selectedObject.canBeFixed) {
+			selectedObject.setFixed(!selectedObject.isFixed());
+			return true;
+		} else {
+			return false;
+		}
+	}
+	
+	/++
+	 + Erases the selected block
+	 + Returns whether that was possible.
+	 +/
+	 bool eraseSelection() {
+		if(selectedObject) {
+			bool destroyed;
+			if(selectedObject.eraseBlock(selectedBlock, destroyed)) {
+				selectedObject = null;
+				return true;
+			}
+		}
+		return false;
 	}
 	
 	/++
