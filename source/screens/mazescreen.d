@@ -45,10 +45,17 @@ class MazeScreen : GameScreen {
 	
 	void setStage(Stage stage) {
 		this.stage = stage;
-		player = stage.pushers[0];
-		game.subtitle = stage.metadata.title;
-		camera.reset(player.position.toVector2f);
 		
+		// Get player
+		if(stage.pushers.length > 0) {
+			player = stage.pushers[0];
+			camera.reset(player.position.toVector2f);
+		} else {
+			player = null;
+			camera.reset();
+		}
+		
+		game.subtitle = stage.metadata.title;
 		stageRenderer.setStage(stage);
 	}
 	
@@ -67,6 +74,33 @@ class MazeScreen : GameScreen {
 		int cyclingDirection = input.getRotation(OnOffState.TurnedOn);
 		cycleThroughPushers(cyclingDirection);
 		
+		if(player)
+			cyclePlayer(input, delta);
+		
+		cycleCamera(input, delta);
+		
+		if(input.wasTurnedOn(Command.Restart)) {
+			onRestart(this);
+		}
+	}
+	
+	override void draw(RenderTarget renderTarget, RenderStates states) {
+		import tile;
+		
+		renderTarget.clear(BACKGROUND_COLOR);
+		
+		// Update view
+		enum CENTERING_OFFSET = Vector2f(.5f, .5f);
+		auto gameSize = game.view.size;
+		auto viewCenter = (camera.center + CENTERING_OFFSET) * BLOCK_SIZE;
+		auto viewTopLeft = (viewCenter - gameSize / 2).round;
+		auto viewRect = FloatRect(viewTopLeft, gameSize);
+		renderTarget.view = new View(viewRect);
+		
+		renderTarget.draw(stageRenderer);
+	}
+	
+	private void cyclePlayer(in InputState input, in float delta) {
 		// Grab walls
 		bool grabItem, releaseItem;
 		if(SWITCH_GRIP) {
@@ -120,52 +154,33 @@ class MazeScreen : GameScreen {
 				}
 			}
 		}
-		
-		cycleCamera(input, delta);
-		
-		if(input.wasTurnedOn(Command.Restart)) {
-			onRestart(this);
-		}
-	}
-	
-	override void draw(RenderTarget renderTarget, RenderStates states) {
-		import tile;
-		
-		renderTarget.clear(BACKGROUND_COLOR);
-		
-		// Update view
-		enum CENTERING_OFFSET = Vector2f(.5f, .5f);
-		auto gameSize = game.view.size;
-		auto viewCenter = (camera.center + CENTERING_OFFSET) * BLOCK_SIZE;
-		auto viewTopLeft = (viewCenter - gameSize / 2).round;
-		auto viewRect = FloatRect(viewTopLeft, gameSize);
-		renderTarget.view = new View(viewRect);
-		
-		renderTarget.draw(stageRenderer);
 	}
 	
 	/**
 	 * Tries to move the player, returns whether it was actually moved.
 	 */
-	private bool movePlayer(scope Point movement) {
+	private bool movePlayer(in Point movement) {
 		// Quickly return when movement is zero.
 		if(movement == Point(0, 0))
 			return false;
 		
 		// Remove second axis from movement
+		Point singleAxisMovement;
 		if(movement.x && movement.y) {
 			if(player.facing & Side.Horizontal) 
-				movement.x = 0;
+				singleAxisMovement.x = 0;
 			else
-				movement.y = 0;
+				singleAxisMovement.y = 0;
+		} else {
+			singleAxisMovement = movement;
 		}
 		
 		if(!player.isGrabbing && !player.isGrabbed) {
 			// Change facing
-			player.facing.faceTowards(movement);
+			player.facing.faceTowards(singleAxisMovement);
 		}
 		
-		immutable Side direction = movement.getDirection();
+		immutable Side direction = singleAxisMovement.getDirection();
 		immutable bool canMove = player.canMove(stage, direction);
 		if(canMove) {
 			// Move player
@@ -182,6 +197,11 @@ class MazeScreen : GameScreen {
 	private void cycleCamera(in InputState input, in float delta) {
 		// Update camera
 		bool cameraMode = input.isOn(Command.Camera);
+		
+		// No player, just move the camera anyway
+		if(player is null)
+			cameraMode = true;
+		
 		if(cameraMode) {
 			// Getting camera movement
 			Point movement = input.getOffset(OnOffState.On);
@@ -199,12 +219,17 @@ class MazeScreen : GameScreen {
 		if(direction == 0)
 			return;
 		
+		immutable int pusherCount = stage.pushers.length;
+		// No pushers to cycle through
+		if(pusherCount == 0)
+			return;
+		
 		// Get new pusher for player
 		Pusher newPlayer;
-		immutable int pusherCount = stage.pushers.length;
 		immutable int playerIndex = stage.pushers.countUntil(player);
-		int i = (playerIndex + direction + pusherCount) % pusherCount;
-		while(i != playerIndex) {
+		immutable int startIndex = playerIndex != -1 ? playerIndex : 0;
+		int i = (startIndex + direction + pusherCount) % pusherCount;
+		while(i != startIndex) {
 			auto aPusher = stage.pushers[i];
 			
 			if(aPusher.exit) {
