@@ -45,7 +45,7 @@ class MazeEditorScreen : GameScreen {
 		pusherTool, exitTool;
 	
 	Point selectedBlock, gridDragStart, gridLastDraggedBlock;
-	bool draggingMode;
+	bool activateOnBlock, draggingMode;
 	MovingPoint gridPointer;
 	EditableStageObject selectedObject;
 	Wall wallInConstruction;
@@ -260,18 +260,7 @@ class MazeEditorScreen : GameScreen {
 		if(input.wasButtonTurnedOn(SELECT_BUTTON)) {
 			// Sets the active tool on click
 			if(highlightTool) {
-				// Trash tool can't be active. You click it once
-				// and the selection is deleted.
-				if(highlightTool == trashTool) {
-					trashSelection();
-				} else if(highlightTool == glueTool) {
-					// Toggle glued/unglued walls
-					if(selectedObject && selectedObject.canBeFixed) {
-						selectedObject.setFixed(!selectedObject.isFixed());
-					}
-				} else {
-					toolset.setActive(highlightTool);
-				}
+				toolset.setActive(highlightTool);
 			}
 		}
 		
@@ -288,6 +277,13 @@ class MazeEditorScreen : GameScreen {
 			panning -= input.pointer.movement;
 		}
 		
+		// Set up this well used variable
+		activateOnBlock = false;
+		if(input.wasButtonTurnedOn(SELECT_BUTTON))
+			activateOnBlock = true;
+		else if(input.isButtonOn(SELECT_BUTTON) && gridPointer.hasMoved)
+			activateOnBlock =true;
+		
 		// Convert mouse pointer to view coordinates
 		immutable auto viewPointer = input.pointer.current + panning;
 		gridPointer.move(viewPointer.getGridPoint(BLOCK_SIZE));
@@ -302,13 +298,25 @@ class MazeEditorScreen : GameScreen {
 		// Updating selected block & object
 		if(toolset.activeTool == selectionTool) {
 			checkSelectionTool(input, delta);
+		} else if(toolset.activeTool == trashTool) {
+			if(activateOnBlock) {
+				setSelection(gridPointer.current);
+				trashSelection();
+			}
+		} else if(toolset.activeTool == glueTool) {
+			if(activateOnBlock) {
+				// Refresh selection
+				setSelection(gridPointer.current);
+				
+				// Toggle glued/unglued walls
+				if(selectedObject && selectedObject.canBeFixed) {
+					selectedObject.setFixed(!selectedObject.isFixed());
+				}
+			}
 		} else if(toolset.activeTool == wallTool) {
 			checkWallTool(input, delta);
 		} else if(toolset.activeTool == eraserTool) {
-			bool erase;
-			erase = input.wasButtonTurnedOn(SELECT_BUTTON);
-			erase |= input.isButtonOn(SELECT_BUTTON) && gridPointer.hasMoved;
-			if(erase) {
+			if(activateOnBlock) {
 				setSelection(gridPointer.current);
 				
 				if(selectedObject) {
@@ -381,7 +389,7 @@ class MazeEditorScreen : GameScreen {
 	void checkSelectionTool(in InputState input, in float delta) {
 		if(input.wasButtonTurnedOn(SELECT_BUTTON)) {
 			setSelection(gridPointer.current);
-		} else if(input.isButtonOn(SELECT_BUTTON)) {
+		} else if(input.isButtonOn(SELECT_BUTTON) && gridPointer.hasMoved) {
 			// Drag selected object
 			// Can only drag if there is something selected
 			bool dragStuff = !(selectedObject is null);
@@ -408,6 +416,11 @@ class MazeEditorScreen : GameScreen {
 				selectedObject.drag(fromBlock, toBlock, offset);
 				// Move selection
 				selectedBlock += offset;
+			}
+			
+			// Set selection to pointer if not dragging
+			if(draggingMode == false) {
+				setSelection(gridPointer.current);
 			}
 		} else if(input.wasButtonTurnedOff(SELECT_BUTTON)) {
 			if(selectedObject)
