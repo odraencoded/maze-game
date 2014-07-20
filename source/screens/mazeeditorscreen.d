@@ -587,7 +587,7 @@ class EditingContext {
 /++
  + A set of tools.
  +/
-class EditingToolSet : DisplayObject!int {// : DisplayObject(int) {
+class EditingToolSet : DisplayObject!int {
 	enum TOOL_WIDTH = 16;
 	enum TOOL_HEIGHT = 16;
 	enum VERTICAL_PADDING = 0;
@@ -680,7 +680,8 @@ class EditingToolSet : DisplayObject!int {// : DisplayObject(int) {
 	void updateCache() {
 		// Cache background
 		enum OUTLINE_COLOR = Color(0, 0, 0);
-		enum FACE_COLOR = Color(231, 220, 193);
+		enum FACE_COLOR = Color(190, 180, 160);
+		enum SELECTION_FACE_COLOR = Color(231, 220, 193);
 		enum BORDER_COLOR = Color(0, 0, 0, 64);
 		enum HIGHLIGHT_COLOR = Color(255, 255, 255);
 		
@@ -705,7 +706,7 @@ class EditingToolSet : DisplayObject!int {// : DisplayObject(int) {
 		
 		faceRect = IntRect(-1, -1, TOOL_WIDTH + 2, TOOL_HEIGHT + 2);
 		faceVertices = faceRect.toVertexArray();
-		faceVertices.dye(FACE_COLOR);
+		faceVertices.dye(SELECTION_FACE_COLOR);
 		
 		selectionCache = new VertexCache();
 		selectionCache.add(outlineVertices);
