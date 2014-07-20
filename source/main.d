@@ -94,6 +94,10 @@ void main(string[] args) {
 					input.releaseButton(cast(Mouse.Button)buttonCode);
 					break;
 				
+				case(Event.EventType.TextEntered):
+					input.newText ~= event.text.unicode;
+					break;
+				
 				case(Event.EventType.LostFocus):
 					input.lostFocus = true;
 					break;

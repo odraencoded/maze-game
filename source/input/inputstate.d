@@ -15,6 +15,7 @@ class InputState {
 	Command[Mouse.Button] buttonBindings;
 	MovingPoint pointer;
 	bool close, lostFocus;
+	dstring newText;
 	
 	this() {
 		_command_input = new OnOffState[Command.max + 1];
@@ -196,6 +197,9 @@ class InputState {
 		// Clear changed key/button
 		_changed_key_input.length = 0;
 		_changed_button_input.length = 0;
+		
+		// Clear text input
+		newText = "";
 	}
 	
 	/++

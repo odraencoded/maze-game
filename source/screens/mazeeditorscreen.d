@@ -177,13 +177,18 @@ class MazeEditorScreen : GameScreen {
 	/++
 	 + Saves the stage.
 	 +/
-	void saveStage() {
+	void saveStage(string filename = null) {
 		if(context) {
-			if(stageFilename is null) {
-				stageFilename = FALLBACK_STAGE_FILENAME;
+			if(filename is null) {
+				if(stageFilename is null) {
+					filename = FALLBACK_STAGE_FILENAME;
+				} else {
+					filename = stageFilename;
+				}
 			}
 			
-			context.stage.saveToDisk(stageFilename);
+			context.stage.saveToDisk(filename);
+			stageFilename = filename;
 		}
 	}
 	
@@ -823,10 +828,7 @@ class MazeEditorSettingsScreen : GameScreen {
 		if(editorScreen.context) {
 			// Save stage
 			auto saveMenuItem = menuContext.createMenuItem("Save Stage");
-			saveMenuItem.onActivate ~= {
-				editorScreen.saveStage();
-				closeSettings();
-			};
+			saveMenuItem.onActivate ~= &showSaveMenu;
 			mainMenu.items ~= saveMenuItem;
 		}
 		
@@ -872,11 +874,67 @@ class MazeEditorSettingsScreen : GameScreen {
 		menuContext.currentMenu = mainMenu;
 	}
 	
+	void showSaveMenu() {
+		import std.conv;
+		import std.path;
+		
+		// Get name shown when the screen appears
+		string startName;
+		if(editorScreen.stageFilename) {
+			startName = editorScreen.stageFilename.baseName;
+		} else {
+			startName = "";
+		}
+		
+		auto saveMenu = new Menu();
+		saveMenu.onCancel ~= &showMainMenu;
+		
+		// Create menu name item
+		auto nameTextGraphic = menuContext.createText();
+		auto nameMenuItem = new TextEntryMenuItem(
+			nameTextGraphic,
+			menuContext,
+			"Name: ", startName.to!dstring
+		);
+		
+		// Create save menu item
+		auto saveMenuItem = menuContext.createMenuItem("Save");
+		saveMenuItem.onActivate ~= {
+			auto inputName = nameMenuItem.typedText.to!string;
+			auto basename = defaultExtension(inputName, MAZE_EXTENSION);
+			// TODO: some feedback on this would be nice but I already wasted
+			// too much time on this stupid level editor
+			if(isValidFilename(basename)) {
+				auto filename = EDITOR_DIRECTORY ~ basename;
+				// TODO: Have this somewhere else maybe
+				editorScreen.context.stageMetadata.title = inputName;
+				editorScreen.saveStage(filename);
+				closeSettings();
+			}
+		};
+		
+		// Create cancel menu item
+		auto cancelMenuItem = menuContext.createMenuItem("Cancel");
+		cancelMenuItem.onActivate ~= &showMainMenu;
+		saveMenu.items = [nameMenuItem, saveMenuItem, null, cancelMenuItem];
+		
+		// Set current menu
+		menuContext.currentMenu = saveMenu;
+		
+		// Decide where the selector starts based on the name length
+		if(startName.length == 0) {
+			menuContext.selectedItem = nameMenuItem;
+			nameMenuItem.beginTextEntry();
+		} else {
+			menuContext.selectedItem = saveMenuItem;
+		}
+	}
+	
 	void showLoadMenu() {
 		import std.file;
 		import std.path;
 		
-		string[] mazeFilepaths ;
+		string[] mazeFilepaths;
 		
 		// Fetch .maze file names
 		auto fileList = dirEntries(EDITOR_DIRECTORY, SpanMode.shallow);
@@ -908,10 +966,13 @@ class MazeEditorSettingsScreen : GameScreen {
 			loadMenu.items ~= [mazeMenuItem];
 		}
 		
+		// Create cancel menu item
 		auto cancelMenuItem = menuContext.createMenuItem("Cancel");
 		cancelMenuItem.onActivate ~= &showMainMenu;
 		
-		loadMenu.items ~= [null, cancelMenuItem];
+		if(mazeFilepaths.length > 0)
+			loadMenu.items ~= null;
+		loadMenu.items ~= cancelMenuItem;
 		
 		menuContext.selection = 0;
 		menuContext.currentMenu = loadMenu;
