@@ -179,10 +179,15 @@ class WallEditable : SimpleEditableStageObject {
 	
 	override bool dragCollisionFilter(StageObject object) {
 		return (
+			// Can't pass through obstacle
 			object.isObstacle &&
+			// Except when its over itself
 			!(object is owner) &&
-			// This needs improvement
-			!canFind(context.stage.walls, object)
+			// Can overlap with another wall, but only if both are alike
+			!(
+				canFind(context.stage.walls, object) &&
+				object.isGrabbable == owner.isGrabbable
+			)
 		);
 	}
 	
