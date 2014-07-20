@@ -355,14 +355,16 @@ class Wall : SimpleStageObject {
 	/++
 	 + Add blocks to this wall.
 	 +/
-	void addBlocks(Side[Point] newBlocks) {
+	void addBlocks(
+		Side[Point] newBlocks, in Point newBlocksOffset = Point(0, 0)
+	) {
 		if(blocks.length == 0) {
-			position = Point(0, 0);
+			position = newBlocksOffset;
 			blocks = newBlocks;
 		} else {
 			immutable auto offset = this.getBlockOffset();
 			foreach(Point block, Side joints; newBlocks) {
-				blocks[block - offset] |= joints;
+				blocks[block + newBlocksOffset - offset] |= joints;
 			}
 		}
 		
@@ -374,7 +376,7 @@ class Wall : SimpleStageObject {
 	 + Adds blocks from another wall into this one.
 	 +/
 	void merge(Wall other) {
-		addBlocks(other.blocks.dup);
+		addBlocks(other.blocks.dup, other.position);
 	}
 	
 	
