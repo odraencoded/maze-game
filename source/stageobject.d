@@ -388,34 +388,38 @@ class Wall : SimpleStageObject {
 	Side[Point][] checkSplit() {
 		import std.algorithm;
 		
-		Point[] checkedPoints;
+		bool[Point] checkedBlocks;
 		Side[Point][] clusters;
 		
 		foreach(Point p; blocks.byKey) {
-			if(canFind(checkedPoints, p))
+			// Skip checked blocks
+			if(checkedBlocks.get(p, false))
 				continue;
 			
 			Side[Point] connectedBlocks;
 			Point[] heads = [p];
+			checkedBlocks[p] = true;
 			
 			while(heads.length > 0) {
 				Point[] newHeads;
+				
 				foreach(Point aHead; heads) {
-					checkedPoints ~= aHead;
 					connectedBlocks[aHead] = blocks[aHead];
 					
 					auto neighbours = aHead.getNeighbours(Direction.Cardinal);
 					foreach(Point aNeighbour; neighbours.byValue) {
-						if(canFind(checkedPoints, aNeighbour))
+						// Skip checked blocks
+						if(checkedBlocks.get(aNeighbour, false))
 							continue;
 						
+						// Skip if neighbour is not in this wall's blocks
 						if(aNeighbour !in blocks)
 							continue;
 						
 						newHeads ~= aNeighbour;
+						checkedBlocks[aNeighbour] = true;
 					}
 				}
-				
 				heads = newHeads;
 			}
 			
