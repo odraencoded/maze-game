@@ -570,7 +570,8 @@ class MazeEditorScreen : GameScreen {
 			if(stageFilename is null) {
 				game.subtitle = "New Maze";
 			} else {
-				game.subtitle = stageFilename.baseName;
+				auto baseDirectory = EDITOR_DIRECTORY.absolutePath;
+				game.subtitle = relativePath(stageFilename, baseDirectory);
 			}
 		} else { 
 			game.subtitle = "Editor";
@@ -936,7 +937,9 @@ class MazeEditorSettingsScreen : GameScreen {
 		// Get name shown when the screen appears
 		string startName;
 		if(editorScreen.stageFilename) {
-			startName = editorScreen.stageFilename.baseName;
+			auto absoluteEditorDirectory = EDITOR_DIRECTORY.absolutePath;
+			startName = editorScreen.stageFilename;
+			startName = relativePath(startName, absoluteEditorDirectory);
 		} else {
 			startName = "";
 		}
@@ -955,14 +958,21 @@ class MazeEditorSettingsScreen : GameScreen {
 		// Create save menu item
 		auto saveMenuItem = menuContext.createMenuItem("Save");
 		saveMenuItem.onActivate ~= {
-			auto inputName = nameMenuItem.typedText.to!string;
-			auto basename = defaultExtension(inputName, MAZE_EXTENSION);
+			// Build filename from input
+			auto filename = nameMenuItem.typedText.to!string;
+			filename = defaultExtension(filename, MAZE_EXTENSION);
+			filename = buildNormalizedPath(EDITOR_DIRECTORY, filename);
+			auto basename = filename.baseName;
+			
 			// TODO: some feedback on this would be nice but I already wasted
 			// too much time on this stupid level editor
-			if(isValidFilename(basename)) {
-				auto filename = EDITOR_DIRECTORY ~ basename;
+			bool validName = basename.stripExtension.length > 0;
+			validName &= isValidFilename(basename);
+			validName &= isValidPath(filename);
+			if(validName) {
 				// TODO: Have this somewhere else maybe
-				editorScreen.context.stageMetadata.title = inputName;
+				auto newTitle = basename.stripExtension;
+				editorScreen.context.stageMetadata.title = newTitle;
 				editorScreen.saveStage(filename);
 				closeSettings();
 			}
@@ -992,11 +1002,11 @@ class MazeEditorSettingsScreen : GameScreen {
 		string[] mazeFilepaths;
 		
 		// Fetch .maze file names
-		auto fileList = dirEntries(EDITOR_DIRECTORY, SpanMode.shallow);
+		auto fileList = dirEntries(EDITOR_DIRECTORY, SpanMode.breadth);
 		foreach(DirEntry anEntry; fileList) {
 			if(anEntry.isFile) {
-				auto aFilepath = anEntry.name;
-				if(anEntry.name.extension == MAZE_EXTENSION) {
+				auto aFilepath = anEntry.name.absolutePath;
+				if(aFilepath.extension == MAZE_EXTENSION) {
 					mazeFilepaths ~= aFilepath;
 				}
 			}
@@ -1014,8 +1024,10 @@ class MazeEditorSettingsScreen : GameScreen {
 			closeSettings();
 		};
 		
+		auto absoluteEditorDirectory = EDITOR_DIRECTORY.absolutePath;
 		foreach(string aPath; mazeFilepaths) {
-			auto mazeMenuItem = menuContext.createMenuItem(aPath.baseName);
+			auto shownName = relativePath(aPath, absoluteEditorDirectory);
+			auto mazeMenuItem = menuContext.createMenuItem(shownName);
 			mazeItemsPaths[mazeMenuItem] = aPath;
 			mazeMenuItem.onActivate ~= loadOneMazeMenuItem;
 			loadMenu.items ~= [mazeMenuItem];
