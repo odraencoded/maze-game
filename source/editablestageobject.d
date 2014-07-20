@@ -96,11 +96,11 @@ class SimpleEditableStageObject : EditableStageObject {
 		// If it does collide, try moving on the horizontal axis,
 		// then on the vertical axis, then give up and go eat ice cream.
 		immutable auto optimalTarget = owner.position + to - from;
-		immutable auto possibleTargets = [
-			optimalTarget,
-			Point(optimalTarget.x, owner.position.y),
-			Point(owner.position.x, optimalTarget.y),
-		];
+		auto possibleTargets = [optimalTarget];
+		if(optimalTarget.x != owner.position.x)
+			possibleTargets ~= Point(optimalTarget.x, owner.position.y);
+		if(optimalTarget.y != owner.position.y)
+			possibleTargets ~= Point(owner.position.x, optimalTarget.y);
 		
 		auto ownerBlocks = owner.getBlocks();
 		foreach(Point targetPosition; possibleTargets) {
@@ -129,6 +129,31 @@ class SimpleEditableStageObject : EditableStageObject {
 	}
 }
 
+/++
+ + Editable implementation for pushers
+ +/
+class PusherEditable : SimpleEditableStageObject {
+	Pusher pusherOwner;
+	
+	this(EditingContext context, Pusher owner) {
+		super(context, owner);
+		this.pusherOwner = owner;
+	}
+	
+	override bool drag(in Point from, in Point to, out Point offset) {
+		bool dragged = super.drag(from, to, offset);		
+		
+		if(dragged) {
+			pusherOwner.facing.faceTowards(offset);
+		} else {
+			pusherOwner.facing.faceTowards(to - from);
+		}
+		
+		return dragged;
+	}
+}
+ 
+ 
 /++
  + Editable implementation for Walls
  +/

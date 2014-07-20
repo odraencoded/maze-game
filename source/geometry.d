@@ -150,6 +150,43 @@ Point getOffset(in Side side) pure @safe {
 	return offset;
 }
 
+/++
+ + Changes facing to point towards target with a cardinal direction.
+ + Returns whether facing changed.
+ +/
+bool faceTowards(ref Direction facing, in Point target) pure @safe {
+	Direction newFacing = facing;
+	if(target.x != 0) {
+		if(target.y != 0) {
+			if(abs(target.y) > abs(target.x)) {
+				goto VerticalFacingCheck;
+			} else if(abs(target.y) == abs(target.x)) {
+				if(facing.hasFlag(Direction.Vertical))
+					goto VerticalFacingCheck;
+			}
+		}
+		
+		if (target.x < 0) {
+			newFacing = Direction.Left;
+		} else {
+			newFacing = Direction.Right;
+		}
+	} else {
+		VerticalFacingCheck:
+		if(target.y < 0)
+			newFacing = Direction.Up;
+		else if(target.y > 0)
+			newFacing = Direction.Down;
+	}
+	
+	if(facing != newFacing) {
+		facing = newFacing;
+		return true;
+	} else {
+		return false;
+	}
+}
+
 /**
  * Returns a value which is the opposite Side of the input.
  * e.g getOpposite(Side.Right) == Side.Left

@@ -190,6 +190,10 @@ class Pusher : SimpleStageObject  {
 		obstacle = true;
 	}
 	
+	override PusherEditable getEditable(EditingContext context) {
+		return new PusherEditable(context, this);
+	}
+	
 	bool isGrabbing() @property { return !(grabbedObject is null); }
 	
 	void grabObject(Stage stage) {

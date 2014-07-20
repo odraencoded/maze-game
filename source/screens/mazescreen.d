@@ -162,7 +162,7 @@ class MazeScreen : GameScreen {
 		
 		if(!player.isGrabbing && !player.isGrabbed) {
 			// Change facing
-			changeFacing(player.facing, movement);
+			player.facing.faceTowards(movement);
 		}
 		
 		immutable Side direction = movement.getDirection();
@@ -305,25 +305,5 @@ class PauseMenuScreen : GameScreen {
 		
 		// Draw menu
 		renderTarget.draw(menuContext);
-	}
-}
-
-private void changeFacing(ref Side facing, in Point direction) pure {
-	if(direction.x != 0) {
-		if(direction.y != 0 && (facing & Side.Vertical) != 0) {
-			goto VerticalFacingCheck;
-		}
-		
-		if (direction.x < 0) {
-			facing = Side.Left;
-		} else {
-			facing = Side.Right;
-		}
-	} else {
-		VerticalFacingCheck:
-		if(direction.y < 0)
-			facing = Side.Up;
-		else if(direction.y > 0)
-			facing = Side.Down;
 	}
 }
