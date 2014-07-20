@@ -419,9 +419,22 @@ class MazeEditorScreen : GameScreen {
 	
 	void checkWallTool(in InputState input, in float delta) {
 		if(input.wasButtonTurnedOn(SELECT_BUTTON)) {
+			// Update selection
+			setSelection(gridPointer.current);
+			
 			// Start constructing a new wall
 			wallInConstruction = new Wall();
 			wallInConstruction.glueBlock(gridPointer.current);
+			
+			// Propagate whether the wall is fixed from the
+			// current selected object (which is under the cursor)
+			if(selectedObject) {
+				auto wallEditable = wallInConstruction.getEditable(context);
+				if(selectedObject.canBeFixed && wallEditable.canBeFixed) {
+					wallEditable.setFixed(selectedObject.isFixed);
+				}
+			}
+			
 			stageRenderer.updateConstructionCache();
 		} else if(input.isButtonOn(SELECT_BUTTON)) {
 			// Add blocks to the wall
