@@ -28,7 +28,7 @@ void main(string[] args) {
 	loadAssets(mazeGame);
 	
 	// Setup input
-	auto input = setupInput();
+	auto input = SetupInput(mazeGame);
 	
 	// Setup screen
 	// If a directory is passed in the arguments we load it directly
@@ -154,23 +154,23 @@ void main(string[] args) {
 	}
 }
 
-private auto setupInput() {
+private auto SetupInput(Game mazeGame) {
 	import dsfml.window : Keyboard;
 	
-	auto result = new InputState();
+	auto bindings = mazeGame.bindings;
 	
 	// TODO: Replace this by something that loads bindings from a file.
-	result.bind(Keyboard.Key.I, Command.GoUp         );
-	result.bind(Keyboard.Key.L, Command.GoRight      );
-	result.bind(Keyboard.Key.K, Command.GoDown       );
-	result.bind(Keyboard.Key.J, Command.GoLeft       );
-	result.bind(Keyboard.Key.Q, Command.CyclePrevious);
-	result.bind(Keyboard.Key.E, Command.CycleNext    );
-	result.bind(Keyboard.Key.D, Command.Grab         );
-	result.bind(Keyboard.Key.W, Command.Camera       );
-	result.bind(Keyboard.Key.R, Command.Restart      );
+	bindings.keys[Command.GoUp         ] = Keyboard.Key.I;
+	bindings.keys[Command.GoRight      ] = Keyboard.Key.L;
+	bindings.keys[Command.GoDown       ] = Keyboard.Key.K;
+	bindings.keys[Command.GoLeft       ] = Keyboard.Key.J;
+	bindings.keys[Command.CyclePrevious] = Keyboard.Key.Q;
+	bindings.keys[Command.CycleNext    ] = Keyboard.Key.E;
+	bindings.keys[Command.Grab         ] = Keyboard.Key.D;
+	bindings.keys[Command.Camera       ] = Keyboard.Key.W;
+	bindings.keys[Command.Restart      ] = Keyboard.Key.R;
 	
-	return result;
+	return new InputState(bindings);
 }
 
 private void SwitchScreens(Game mazeGame, InputState input) {

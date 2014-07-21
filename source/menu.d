@@ -136,8 +136,8 @@ class MenuContext : Drawable {
 		
 		// Whether the menu item has been activated
 		bool activate;
-		activate = input.wasKeyTurnedOn(SystemKey.Return);
-		activate |= input.wasTurnedOn(Command.Grab);
+		activate = input[SystemKey.Return].wasTurnedOn;
+		activate |= input[Command.Grab].wasTurnedOn;
 		
 		if(activate) {
 			auto selectedItem = currentMenu.items[selection];
@@ -146,7 +146,7 @@ class MenuContext : Drawable {
 		
 		// Checking whether the player cancelled the action
 		bool cancel;
-		cancel = input.wasKeyTurnedOn(SystemKey.Escape);
+		cancel = input[SystemKey.Escape].wasTurnedOn;
 		if(cancel) {
 			currentMenu.onCancel(currentMenu);
 		}

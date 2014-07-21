@@ -17,7 +17,6 @@ import stage;
 import stageobject;
 import stagerenderer;
 import tile;
-import utility : OnOffState;
 
 enum EDITOR_DIRECTORY = "editor" ~ slash;
 enum MAZE_EXTENSION = ".maze";
@@ -228,7 +227,7 @@ class EditorScreen : GameScreen {
 	
 	override void cycle(in InputState input, in float delta) {
 		bool openSettings = false;
-		openSettings |= input.wasKeyTurnedOn(SystemKey.Escape);
+		openSettings |= input[SystemKey.Escape].wasTurnedOn;
 		if(openSettings) {
 			game.nextScreen = new EditorSettingsScreen(game, this);
 			return;
@@ -246,7 +245,7 @@ class EditorScreen : GameScreen {
 		
 		hoveringStage = !toolset.isUnderPoint(toolsetPoint);
 		
-		if(input.wasButtonTurnedOn(SELECT_BUTTON)) {
+		if(input[SELECT_BUTTON].wasTurnedOn) {
 			// Sets the active tool on click
 			if(highlightTool) {
 				toolset.setActive(highlightTool);
@@ -268,9 +267,9 @@ class EditorScreen : GameScreen {
 		
 		// Set up this well used variable
 		activateOnBlock = false;
-		if(input.wasButtonTurnedOn(SELECT_BUTTON))
+		if(input[SELECT_BUTTON].wasTurnedOn)
 			activateOnBlock = true;
-		else if(input.isButtonOn(SELECT_BUTTON) && gridPointer.hasMoved)
+		else if(input[SELECT_BUTTON].isOn && gridPointer.hasMoved)
 			activateOnBlock =true;
 		
 		// Convert mouse pointer to view coordinates
@@ -278,16 +277,16 @@ class EditorScreen : GameScreen {
 		gridPointer.move(viewPointer.getGridPoint(BLOCK_SIZE));
 		
 		// Set where the drag started
-		if(input.wasButtonTurnedOn(SELECT_BUTTON)) {
+		if(input[SELECT_BUTTON].wasTurnedOn) {
 			gridDragStart = gridPointer.current;
-		} else if(input.isButtonOn(SELECT_BUTTON)) {
+		} else if(input[SELECT_BUTTON].isOn) {
 			gridLastDraggedBlock = gridPointer.current;
 		}
 		
 		// Updating selected block & object
 		toolset.cycle(input, delta);
 		
-		if(input.wasKeyTurnedOn(Keyboard.Key.Delete)) {
+		if(input[Keyboard.Key.Delete].wasTurnedOn) {
 			if(selectedObject)
 				trash(selectedObject);
 		}

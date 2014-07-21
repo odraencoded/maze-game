@@ -1,9 +1,9 @@
 import dsfml.graphics;
 
+import inputbinder;
 import gamescreen;
 import geometry;
 import stage;
-
 import view;
 
 enum BLOCK_SIZE = 16;
@@ -15,7 +15,7 @@ class Game {
 	bool isRunning;
 	
 	GameAssets assets;
-	
+	InputBinder bindings;
 	GameScreen currentScreen, nextScreen;
 	
 	RenderTexture buffer;
@@ -30,6 +30,7 @@ class Game {
 		size = Vector2u(width, height);
 		view = new View(FloatRect(Vector2f(0, 0), size.toVector2f));
 		
+		bindings = new InputBinder();
 		assets = new GameAssets();
 		resizer = new VideoResizer(this);
 	}

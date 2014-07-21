@@ -61,7 +61,7 @@ class MazeScreen : GameScreen {
 	
 	override void cycle(in InputState input, in float delta) {
 		bool pauseGame = false;
-		pauseGame |= input.wasKeyTurnedOn(SystemKey.Escape);
+		pauseGame |= input[SystemKey.Escape].wasTurnedOn;
 		pauseGame |= input.lostFocus;
 		
 		if(pauseGame) {
@@ -79,7 +79,7 @@ class MazeScreen : GameScreen {
 		
 		cycleCamera(input, delta);
 		
-		if(input.wasTurnedOn(Command.Restart)) {
+		if(input[Command.Restart].wasTurnedOn) {
 			onRestart(this);
 		}
 	}
@@ -105,7 +105,7 @@ class MazeScreen : GameScreen {
 		bool grabItem, releaseItem;
 		if(SWITCH_GRIP) {
 			// Press once = on, press again = off
-			if(input.wasTurnedOn(Command.Grab)) {
+			if(input[Command.Grab].wasTurnedOn) {
 				if(player.isGrabbing)
 					releaseItem = true;
 				else
@@ -113,7 +113,7 @@ class MazeScreen : GameScreen {
 			}
 		} else {
 			// Hold key = on, release key = off
-			if(input.isOn(Command.Grab))
+			if(input[Command.Grab].isOn)
 				grabItem = true;
 			else
 				releaseItem = true;
@@ -127,7 +127,7 @@ class MazeScreen : GameScreen {
 		}
 		
 		// Whether to move the player or the camera
-		bool cameraMode = input.isOn(Command.Camera);
+		bool cameraMode = input[Command.Camera].isOn;
 		
 		bool playerMoved = false;
 		if(!cameraMode) {
@@ -196,7 +196,7 @@ class MazeScreen : GameScreen {
 	 +/
 	private void cycleCamera(in InputState input, in float delta) {
 		// Update camera
-		bool cameraMode = input.isOn(Command.Camera);
+		bool cameraMode = input[Command.Camera].isOn;
 		
 		// No player, just move the camera anyway
 		if(player is null)

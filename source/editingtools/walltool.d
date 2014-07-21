@@ -20,7 +20,7 @@ class WallTool : EditingTool {
 		
 		Wall* wallInConstruction = &editor.wallInConstruction;
 		
-		if(input.wasButtonTurnedOn(SELECT_BUTTON)) {
+		if(input[SELECT_BUTTON].wasTurnedOn) {
 			// Update selection
 			editor.setSelection(gridPointer.current);
 			
@@ -39,7 +39,7 @@ class WallTool : EditingTool {
 			}
 			
 			editor.stageRenderer.updateConstructionCache();
-		} else if(input.isButtonOn(SELECT_BUTTON)) {
+		} else if(input[SELECT_BUTTON].isOn) {
 			// Add blocks to the wall
 			if(*wallInConstruction && gridPointer.hasMoved) {
 				import std.algorithm;
@@ -67,7 +67,7 @@ class WallTool : EditingTool {
 				
 				editor.stageRenderer.updateConstructionCache();
 			}
-		} else if(input.wasButtonTurnedOff(SELECT_BUTTON)) {
+		} else if(input[SELECT_BUTTON].wasTurnedOff) {
 			if(!*wallInConstruction)
 				return;
 			
