@@ -23,7 +23,7 @@ class MenuScreen : GameScreen {
 	this(Game game) {
 		super(game);
 		
-		menuContext = new MenuContext(game.assets);
+		menuContext = new MenuContext(game);
 		
 		// Create main menu 
 		// Play menu item

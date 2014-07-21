@@ -26,19 +26,21 @@ enum MENU_Y = SELECTOR_Y - 5;
 class MenuContext : Drawable {
 	int selection;
 	
+	Game game;
 	Menu currentMenu;
 	Font menuFont;
 	
 	TileSprite selectorSprite;
 	bool lockSelector;
 	
-	this(GameAssets assets) {
-		menuFont = assets.menuFont;
+	this(Game game) {
+		this.game = game;
+		menuFont = game.assets.menuFont;
 		
 		selectorSprite = new TileSprite();
-		selectorSprite.texture = &assets.textures[Asset.SymbolTexture];
+		selectorSprite.texture = &game.assets.textures[Asset.SymbolTexture];
 		
-		auto symbolMap = assets.maps[Asset.SymbolMap];
+		auto symbolMap = game.assets.maps[Asset.SymbolMap];
 		selectorSprite.piece = symbolMap[SymbolMapKeys.MenuSelector];
 	}
 	
@@ -82,13 +84,18 @@ class MenuContext : Drawable {
 	}
 	
 	void draw(RenderTarget renderTarget, RenderStates states) {
+		auto sizeDiff = renderTarget.view.size - this.game.size;
+		auto viewOffset = Vector2i(0, cast(int)(sizeDiff.y / 2));
+		auto offset = viewOffset + Vector2i(SELECTOR_X, SELECTOR_Y);
+		
 		RenderStates selectorStates;
-		selectorStates.transform.translate(SELECTOR_X, SELECTOR_Y);
+		selectorStates.transform.translate(offset.x, offset.y);
 		
 		renderTarget.draw(selectorSprite, selectorStates);
 		
 		RenderStates menuStates;
-		menuStates.transform.translate(MENU_X, MENU_Y);
+		offset = viewOffset + Vector2i(MENU_X, MENU_Y);
+		menuStates.transform.translate(offset.x, offset.y);
 		menuStates.transform.translate(0, selection * MENU_ITEM_HEIGHT * -1);
 		
 		foreach(MenuItem anItem; currentMenu.items) {

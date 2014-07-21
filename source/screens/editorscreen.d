@@ -414,7 +414,7 @@ class EditorSettingsScreen : GameScreen {
 		
 		// Create the menu
 		editorScreen = screen;
-		menuContext = new MenuContext(game.assets);
+		menuContext = new MenuContext(game);
 		
 		mainMenu = new Menu();
 		
