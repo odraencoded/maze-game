@@ -22,7 +22,6 @@ class MenuScreen : GameScreen {
 	
 	this(Game game) {
 		super(game);
-		game.subtitle = MENUSCREEN_WINDOW_TITLE;
 		
 		menuContext = new MenuContext(game.assets);
 		
@@ -47,6 +46,10 @@ class MenuScreen : GameScreen {
 		mainMenu.items = [playMenuItem, editorMenuItem, null, exitMenuItem];
 		
 		menuContext.currentMenu = mainMenu;
+	}
+	
+	override void appear() {
+		game.subtitle = MENUSCREEN_WINDOW_TITLE;
 	}
 	
 	override void cycle(in InputState input, in float delta) {

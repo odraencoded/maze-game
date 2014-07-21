@@ -4,6 +4,7 @@ import dsfml.graphics.color : Color;
 import scaling : ScalingMode;
 
 import game;
+import input;
 
 enum GAME_WIDTH = 320;
 enum GAME_HEIGHT = 180;
@@ -47,9 +48,8 @@ void main(string[] args) {
 		goToMenu();
 	}
 	
-	// Switch screens
-	mazeGame.currentScreen = mazeGame.nextScreen;
-	mazeGame.nextScreen = null;
+	// First switch screens
+	SwitchScreens(mazeGame, input);
 	
 	// Main loop
 	mazeGame.isRunning = true;
@@ -143,25 +143,7 @@ void main(string[] args) {
 		window.display();
 		
 		// Changing screens
-		if(mazeGame.nextScreen) {
-			mazeGame.currentScreen.disappear();
-			
-			// In case .disappear() forces the screen to remain the same
-			if(mazeGame.nextScreen != mazeGame.currentScreen) {
-				import gamescreen : GameScreen;
-				GameScreen nextScreen;
-				do {
-					nextScreen = mazeGame.nextScreen;
-					nextScreen.appear();
-				} while(nextScreen != mazeGame.nextScreen);
-				
-				mazeGame.currentScreen = mazeGame.nextScreen;
-				mazeGame.nextScreen = null;
-				
-				// Reset input so that it's not carried on to the next screen
-				input.reset();
-			}
-		}
+		SwitchScreens(mazeGame, input);
 		
 		// Cleaning up the trash
 		import core.memory : GC;
@@ -179,7 +161,6 @@ private auto setupWindow() {
 }
 
 private auto setupInput() {
-	import input;
 	import dsfml.window : Keyboard;
 	
 	auto result = new InputState();
@@ -196,6 +177,29 @@ private auto setupInput() {
 	result.bind(Keyboard.Key.R, Command.Restart      );
 	
 	return result;
+}
+
+private void SwitchScreens(Game mazeGame, InputState input) {
+	if(mazeGame.nextScreen) {
+		if(mazeGame.currentScreen)
+			mazeGame.currentScreen.disappear();
+		
+		// In case .disappear() forces the screen to remain the same
+		if(mazeGame.nextScreen != mazeGame.currentScreen) {
+			import gamescreen : GameScreen;
+			GameScreen nextScreen;
+			do {
+				nextScreen = mazeGame.nextScreen;
+				nextScreen.appear();
+			} while(nextScreen != mazeGame.nextScreen);
+			
+			mazeGame.currentScreen = mazeGame.nextScreen;
+			mazeGame.nextScreen = null;
+			
+			// Reset input so that it's not carried on to the next screen
+			input.reset();
+		}
+	}
 }
 
 private void loadAssets(Game mazeGame) {
