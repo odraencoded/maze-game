@@ -9,4 +9,6 @@ import commands;
 class InputBinder {
 	Keyboard.Key[Command] keys;
 	Mouse.Button[Command] buttons;
+	
+	Keyboard.Key[] forbiddenKeys;
 }

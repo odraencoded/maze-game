@@ -346,3 +346,97 @@ class ChoiceMenuItem(T) : MenuItem {
 private:
 	int _selectedIndex = -1;
 }
+
+/++
+ + A menu item binds keys
+ +/
+class KeyBindingMenuItem : MenuItem {
+	import input;
+	
+	MenuContext context;
+	InputBinder bindings;
+	Command command;
+	dstring prefix;
+	
+	enum CARET_FLASHING_RATE = .8f;
+	float caredAnimation = 0;
+	
+	bool instantSwitchBackGuard;
+	
+	this(
+		Text text, MenuContext context, InputBinder bindings,
+		Command command, dstring prefix = ""
+	) {
+		this.text = text;
+		this.context = context;
+		this.bindings = bindings;
+		this.command = command;
+		this.prefix = prefix;
+		
+		refreshText();
+		
+		onActivate ~= &beginKeyBinding;
+	}
+	
+	override void cycle(in InputState input, in float delta) {
+		if(!_keyBindingMode)
+			return;
+		
+		// Update caret animation
+		caredAnimation = (caredAnimation + delta) % CARET_FLASHING_RATE;
+		
+		// Bind a pressed key and unlock the menu context
+		auto pressedKeys = input.getPressedKeys(true);
+		if(pressedKeys.length > 0 && !instantSwitchBackGuard) {
+			import std.algorithm;
+			
+			auto newKey = pressedKeys[0];
+			if(!canFind(bindings.forbiddenKeys, newKey)) {
+				bindings.keys[command] = newKey;
+			}
+			
+			context.lockSelector = false;
+			_keyBindingMode = false;
+		}
+		refreshText();
+		
+		instantSwitchBackGuard = false;
+	}
+	
+	void refreshText() {
+		// Refresh text graphic
+		if(_keyBindingMode) {
+			// Refresh text graphic
+			if(caredAnimation > CARET_FLASHING_RATE / 2)
+				text.setString(this.prefix ~ "_");
+			else
+				text.setString(this.prefix);
+			
+		} else {
+			dstring keyName;
+			Keyboard.Key boundKey;
+			
+			if(bindings.keys.tryGet(command, boundKey)) {
+				keyName = GetKeyName(boundKey);
+			} else {
+				keyName = "None";
+			}
+			
+			text.setString(this.prefix ~ keyName);
+		}
+	}
+	
+	/++
+	 + Switch to the next choice.
+	 +/
+	void beginKeyBinding() {
+		context.lockSelector = true;
+		_keyBindingMode = true;
+		instantSwitchBackGuard = true;
+		
+		refreshText();
+	}
+	
+private:
+	private bool _keyBindingMode;
+}

@@ -123,6 +123,36 @@ class MenuScreen : GameScreen {
 		// Create options menu
 		auto optionsMenu = new Menu();
 		
+		// Create control bindings menu items
+		struct CommandName {
+			Command command;
+			dstring name;
+		}
+		
+		CommandName[] bindingOrder = [
+			CommandName(Command.GoUp         , "Go Up"         ),
+			CommandName(Command.GoRight      , "Go Right"      ),
+			CommandName(Command.GoDown       , "Go Down"       ),
+			CommandName(Command.GoLeft       , "Go Left"       ),
+			CommandName(Command.Grab         , "Grab"          ),
+			CommandName(Command.Camera       , "Camera"        ),
+			CommandName(Command.CycleNext    , "Cycle Next"    ),
+			CommandName(Command.CyclePrevious, "Cycle Previous"),
+			CommandName(Command.Restart      , "Restart"       ),
+		];
+		
+		foreach(CommandName aBindingName; bindingOrder) {
+			auto bindingText = menuContext.createText();
+			auto bindingMenuItem = new KeyBindingMenuItem(
+				bindingText, menuContext, this.game.bindings,
+				aBindingName.command, aBindingName.name ~ ": "
+			);
+			optionsMenu.items ~= bindingMenuItem;
+		}
+		
+		// Adding a space
+		optionsMenu.items ~= null;
+		
 		// Add a scaling mode menu item
 		auto scalingText = menuContext.createText();
 		auto scalingMenuItem = new ChoiceMenuItem!ScalingMode(

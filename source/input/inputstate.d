@@ -134,6 +134,23 @@ class InputState {
 	}
 	
 	/++
+	 + Gets which keys have been pressed this cycle.
+	 +/
+	Keyboard.Key[] getPressedKeys(bool thisCycle) const pure @safe {
+		Keyboard.Key[] pressedKeys;
+		
+		foreach(Keyboard.Key key, OnOffState state; _keyStates) {
+			if(thisCycle) {
+				if(state.wasTurnedOn)
+					pressedKeys ~= key;
+			} else if(state.isOn)
+				pressedKeys ~= key;
+		}
+		
+		return pressedKeys;
+	}
+	
+	/++
 	 + Prepares state to receive new input.
 	 +/
 	void prepareCycle() pure @safe {

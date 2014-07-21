@@ -158,6 +158,8 @@ private auto SetupInput(Game mazeGame) {
 	import dsfml.window : Keyboard;
 	
 	auto bindings = mazeGame.bindings;
+	bindings.forbiddenKeys ~= Keyboard.Key.Escape;
+	bindings.forbiddenKeys ~= Keyboard.Key.Return;
 	
 	// TODO: Replace this by something that loads bindings from a file.
 	bindings.keys[Command.GoUp         ] = Keyboard.Key.I;
