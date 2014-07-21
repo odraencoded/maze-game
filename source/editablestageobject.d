@@ -1,10 +1,9 @@
 import std.algorithm;
 
 import geometry;
-import mazeeditorscreen;
 import stageobject;
 
-public import mazeeditorscreen : EditingContext;
+public import editorscreen : EditingContext;
 
 /++
  + Lets objects be edited in the level editor.

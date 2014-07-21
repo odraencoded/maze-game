@@ -6,6 +6,7 @@ import dsfml.graphics;
 import anchoring;
 import assetcodes;
 import editablestageobject;
+import editingtools;
 import game;
 import gamescreen;
 import mazescreen;
@@ -28,13 +29,13 @@ enum NEW_STAGE_TITLE = "New Stage";
 enum FALLBACK_STAGE_TITLE = "Untitled";
 enum FALLBACK_STAGE_FILENAME = EDITOR_DIRECTORY ~ slash ~ "untitled.maze";
 
-class MazeEditorScreen : GameScreen {
+class EditorScreen : GameScreen {
 	EditingContext context;
 	
 	string stageFilename;
 	
-	Signal!(MazeEditorScreen) onQuit;
-	MazeEditorStageRenderer stageRenderer;
+	Signal!(EditorScreen) onQuit;
+	EditorStageRenderer stageRenderer;
 	
 	EditingToolSet toolset;
 	EditingToolSet.Anchor toolsetAnchor;
@@ -63,26 +64,13 @@ class MazeEditorScreen : GameScreen {
 		
 		// Create tools
 		auto toolsMap = gameAssets.maps[Asset.ToolsMap];
-		selectionTool = new EditingTool();
-		selectionTool.icon = toolsMap[ToolsMapKeys.SelectionTool];
-		
-		eraserTool = new EditingTool();
-		eraserTool.icon = toolsMap[ToolsMapKeys.EraserTool];
-		
-		trashTool = new EditingTool();
-		trashTool.icon = toolsMap[ToolsMapKeys.TrashTool];
-		
-		wallTool = new EditingTool();
-		wallTool.icon = toolsMap[ToolsMapKeys.WallTool];
-		
-		glueTool = new EditingTool();
-		glueTool.icon = toolsMap[ToolsMapKeys.GlueTool];
-		
-		pusherTool = new EditingTool();
-		pusherTool.icon = toolsMap[ToolsMapKeys.PusherTool];
-		
-		exitTool = new EditingTool();
-		exitTool.icon = toolsMap[ToolsMapKeys.ExitTool];
+		selectionTool = new SelectionTool(this, toolsMap);
+		eraserTool = new EraserTool(this, toolsMap);
+		trashTool = new TrashTool(this, toolsMap);
+		wallTool = new WallTool(this, toolsMap);
+		glueTool = new GlueTool(this, toolsMap);
+		pusherTool = new PusherTool(this, toolsMap);
+		exitTool = new ExitTool(this, toolsMap);
 		
 		toolset.tools = [
 			selectionTool, eraserTool, trashTool,
@@ -90,13 +78,13 @@ class MazeEditorScreen : GameScreen {
 			pusherTool, exitTool
 		];
 		
-		toolset.activeTool = selectionTool;
+		toolset.setActive(selectionTool);
 		
 		toolsetAnchor = toolset.createAnchor();
 		toolsetAnchor.side = Side.TopAndRight;
 		toolsetAnchor.margin = Point(8, 8);
 		
-		stageRenderer = new MazeEditorStageRenderer(gameAssets, this);
+		stageRenderer = new EditorStageRenderer(gameAssets, this);
 		
 		// Create cursor sprite
 		cursorSprite = new TileSprite();
@@ -235,14 +223,14 @@ class MazeEditorScreen : GameScreen {
 		// If no context is loaded in the editor, load the editor settings
 		// screen instead
 		if(context is null)
-			game.nextScreen = new MazeEditorSettingsScreen(game, this);
+			game.nextScreen = new EditorSettingsScreen(game, this);
 	}
 	
 	override void cycle(in InputState input, in float delta) {
 		bool openSettings = false;
 		openSettings |= input.wasKeyTurnedOn(SystemKey.Escape);
 		if(openSettings) {
-			game.nextScreen = new MazeEditorSettingsScreen(game, this);
+			game.nextScreen = new EditorSettingsScreen(game, this);
 			return;
 		}
 		
@@ -261,18 +249,7 @@ class MazeEditorScreen : GameScreen {
 		if(input.wasButtonTurnedOn(SELECT_BUTTON)) {
 			// Sets the active tool on click
 			if(highlightTool) {
-				if(toolset.activeTool == highlightTool) {
-					// Double click, or rather, clicking twice
-					if(highlightTool == trashTool) {
-						trashSelection();
-					} else if(highlightTool == glueTool) {
-						glueSelection();
-					} else if(highlightTool == eraserTool) {
-						eraseSelection();
-					}
-				} else {
-					toolset.setActive(highlightTool);
-				}
+				toolset.setActive(highlightTool);
 			}
 		}
 		
@@ -308,59 +285,11 @@ class MazeEditorScreen : GameScreen {
 		}
 		
 		// Updating selected block & object
-		if(toolset.activeTool == selectionTool) {
-			checkSelectionTool(input, delta);
-		} else if(toolset.activeTool == trashTool) {
-			if(activateOnBlock) {
-				setSelection(gridPointer.current);
-				trashSelection();
-			}
-		} else if(toolset.activeTool == glueTool) {
-			if(activateOnBlock) {
-				// Refresh selection
-				setSelection(gridPointer.current);
-				glueSelection();
-			}
-		} else if(toolset.activeTool == wallTool) {
-			checkWallTool(input, delta);
-		} else if(toolset.activeTool == eraserTool) {
-			if(activateOnBlock) {
-				setSelection(gridPointer.current);
-				eraseSelection();
-			}
-		} else if(toolset.activeTool == pusherTool) {
-			if(input.wasButtonTurnedOn(SELECT_BUTTON)) {
-				// Add a new pusher
-				auto newPusher = new Pusher();
-				newPusher.position = gridPointer.current;
-				context.stage.pushers ~= newPusher;
-				
-				// Select pusher
-				selectedObject = newPusher.getEditable(context);
-				selectedBlock = newPusher.position;
-				
-				// Switch to selection mode
-				toolset.setActive(selectionTool);
-			}
-		}
-		else if(toolset.activeTool == exitTool) {
-			if(input.wasButtonTurnedOn(SELECT_BUTTON)) {
-				// Add a new pusher
-				auto newExit = new Exit();
-				newExit.position = gridPointer.current;
-				context.stage.exits ~= newExit;
-				
-				// Select pusher
-				selectedObject = newExit.getEditable(context);
-				selectedBlock = newExit.position;
-				
-				// Switch to selection mode
-				toolset.setActive(selectionTool);
-			}
-		}
+		toolset.cycle(input, delta);
 		
 		if(input.wasKeyTurnedOn(Keyboard.Key.Delete)) {
-			trashSelection();
+			if(selectedObject)
+				trash(selectedObject);
 		}
 	}
 	
@@ -387,122 +316,6 @@ class MazeEditorScreen : GameScreen {
 		renderTarget.draw(toolsetAnchor);
 	}
 	
-	void checkSelectionTool(in InputState input, in float delta) {
-		if(input.wasButtonTurnedOn(SELECT_BUTTON)) {
-			setSelection(gridPointer.current);
-		} else if(input.isButtonOn(SELECT_BUTTON) && gridPointer.hasMoved) {
-			// Drag selected object
-			// Can only drag if there is something selected
-			bool dragStuff = !(selectedObject is null);
-			// And only when the mouse has moved from a grid block to another
-			dragStuff &= gridPointer.hasMoved;
-			// And only if that block is not the currently selected block
-			dragStuff &= selectedBlock != gridPointer.current;
-			
-			// Try to start grabbing mode by grabbing the object
-			if(dragStuff && !draggingMode) {
-				if(selectedObject.grab(selectedBlock)) {
-					draggingMode = true;
-				} else {
-					// Didn't grab, won't drag
-					dragStuff = false;
-				}
-			}
-			
-			// Finally drag something around
-			if(dragStuff) {
-				immutable auto fromBlock = selectedBlock;
-				immutable auto toBlock = gridPointer.current;
-				Point offset;
-				selectedObject.drag(fromBlock, toBlock, offset);
-				// Move selection
-				selectedBlock += offset;
-			}
-			
-			// Set selection to pointer if not dragging
-			if(draggingMode == false) {
-				setSelection(gridPointer.current);
-			}
-		} else if(input.wasButtonTurnedOff(SELECT_BUTTON)) {
-			if(selectedObject)
-				selectedObject.drop(selectedBlock);
-			
-			draggingMode = false;
-		}
-	}
-	
-	void checkWallTool(in InputState input, in float delta) {
-		if(input.wasButtonTurnedOn(SELECT_BUTTON)) {
-			// Update selection
-			setSelection(gridPointer.current);
-			
-			// Start constructing a new wall
-			wallInConstruction = new Wall();
-			wallInConstruction.glueBlock(gridPointer.current);
-			
-			// Propagate whether the wall is fixed from the
-			// current selected object (which is under the cursor)
-			if(selectedObject) {
-				auto wallEditable = wallInConstruction.getEditable(context);
-				if(selectedObject.canBeFixed && wallEditable.canBeFixed) {
-					wallEditable.setFixed(selectedObject.isFixed);
-				}
-			}
-			
-			stageRenderer.updateConstructionCache();
-		} else if(input.isButtonOn(SELECT_BUTTON)) {
-			// Add blocks to the wall
-			if(wallInConstruction && gridPointer.hasMoved) {
-				import std.algorithm;
-				
-				if(!wallInConstruction)
-					return;
-				
-				// Reset new wall blocks
-				wallInConstruction.destroyBlocks();
-				
-				// Create wall blocks in shape of a rectangle from
-				// the start of the drag until the current point
-				int left = min(gridDragStart.x, gridLastDraggedBlock.x);
-				int top = min(gridDragStart.y, gridLastDraggedBlock.y);
-				int right = max(gridDragStart.x, gridLastDraggedBlock.x);
-				int bottom = max(gridDragStart.y, gridLastDraggedBlock.y);
-				
-				foreach(int x; left..right + 1) {
-					foreach(int y; top..bottom + 1) {
-						wallInConstruction.glueBlock(Point(x, y));
-					}
-				}
-				
-				stageRenderer.updateConstructionCache();
-			}
-		} else if(input.wasButtonTurnedOff(SELECT_BUTTON)) {
-			if(!wallInConstruction)
-				return;
-			
-			// Finish constructing wall
-			context.stage.walls ~= wallInConstruction;
-			
-			// Tell the wall to merge with overlapping walls
-			wallInConstruction.getEditable(context).mergeOverlapping();
-			
-			// Select new wall
-			auto wallBlocks = wallInConstruction.getBlocks();
-			auto wallBlockOffset = wallInConstruction.getBlockOffset();
-			// Update selected block only if it's not already at the new wall
-			import std.algorithm : canFind;
-			if(!canFind(wallBlocks, selectedBlock - wallBlockOffset)) {
-				selectedBlock = gridLastDraggedBlock;
-			}
-			selectedObject = wallInConstruction.getEditable(context);
-			wallInConstruction = null;
-			
-			// Update wall cache
-			stageRenderer.updateCachedWalls();
-			stageRenderer.updateConstructionCache();
-		}
-	}
-	
 	/++
 	 + Sets selectedBlock and selectedObject to a given point
 	 +/
@@ -517,52 +330,24 @@ class MazeEditorScreen : GameScreen {
 	}
 	
 	/++
-	 + Removes the currently selected object.
-	 + Returns whether it was removed.
-	 +/
-	bool trashSelection() {
-		if(selectedObject && trash(selectedObject)) {
-			selectedObject = null;
-			return true;
-		} else {
-			return false;
-		}
-	}
-	
-	/++
-	 + Glue the selected object
-	 + Returns whether that was possible.
-	 +/
-	 bool glueSelection() {
-		if(selectedObject && selectedObject.canBeFixed) {
-			selectedObject.setFixed(!selectedObject.isFixed());
-			return true;
-		} else {
-			return false;
-		}
-	}
-	
-	/++
-	 + Erases the selected block
-	 + Returns whether that was possible.
-	 +/
-	 bool eraseSelection() {
-		if(selectedObject) {
-			bool destroyed;
-			if(selectedObject.eraseBlock(selectedBlock, destroyed)) {
-				selectedObject = null;
-				return true;
-			}
-		}
-		return false;
-	}
-	
-	/++
 	 + Removes an object from the stage.
 	 + Returns whether it was removed.
 	 +/
 	bool trash(EditableStageObject trashedObject) {
-		return trashedObject.deleteFromStage();
+		// Check whether the trashed object is also the selected object
+		bool removingSelection = true;
+		if(selectedObject) {
+			if(selectedObject.getOwner() == trashedObject.getOwner())
+				removingSelection = true;
+		}
+		
+		auto trashed = trashedObject.deleteFromStage();
+		
+		// Clear selection if the selection was deleted
+		if(removingSelection && trashed)
+			selectedObject = null;
+			
+		return trashed;
 	}
 	
 	void refreshSubtitle() {
@@ -580,13 +365,13 @@ class MazeEditorScreen : GameScreen {
 	}
 }
 
-class MazeEditorStageRenderer : StageRenderer {
+class EditorStageRenderer : StageRenderer {
 	import mazescreen;
 	
-	MazeEditorScreen screen;
+	EditorScreen screen;
 	VertexCache[Wall] constructionCache;
 	
-	this(GameAssets assets, MazeEditorScreen screen) {
+	this(GameAssets assets, EditorScreen screen) {
 		super(assets);
 		this.screen = screen;
 	}
@@ -610,248 +395,16 @@ class MazeEditorStageRenderer : StageRenderer {
 class EditingContext {
 	Stage stage;
 	StageInfo stageMetadata;
-	MazeEditorScreen editorScreen;
-	MazeEditorStageRenderer stageRenderer;
+	EditorScreen editorScreen;
+	EditorStageRenderer stageRenderer;
 }
 
-/++
- + A set of tools.
- +/
-class EditingToolSet : DisplayObject!int {
-	enum TOOL_WIDTH = 16;
-	enum TOOL_HEIGHT = 16;
-	enum VERTICAL_PADDING = 0;
-	enum BORDER_WIDTH = 1;
-	
-	GameAssets assets;
-	
-	EditingTool[] tools;
-	EditingTool activeTool, highlightTool;
-	VertexCache backgroundCache, iconCache, selectionCache;
-	VertexCache highlightCache, selectionHighlightCache;
-	
-	uint width = 1;
-	
-	this(GameAssets assets) {
-		this.assets = assets;
-	}
-	
-	/++
-	 + Returns the tool at point p
-	 +/
-	EditingTool getToolAt(Point p) {
-		enum FULL_HEIGHT = TOOL_HEIGHT + VERTICAL_PADDING * 2 + BORDER_WIDTH;
-		
-		Point boxSize = getBottomRight();
-		
-		// Check if contained in the active tool sprite
-		if(activeTool) {
-			auto activeY = selectionCache.position.y;
-			if(p.x >= -1 && p.y >= activeY - 1 && p.x < boxSize.x + 1) {
-				if(p.y < activeY + TOOL_HEIGHT - BORDER_WIDTH + 1) {
-					return activeTool;
-				}
-			}
-		}
-		
-		// Check if contained in the toolbar
-		if(p.x < boxSize.x && p.y < boxSize.y && p.x >= 0 && p.y >= 0) {
-			if((p.y % FULL_HEIGHT) < FULL_HEIGHT - BORDER_WIDTH) {
-				int highlightIndex = p.y / FULL_HEIGHT;
-				return tools[highlightIndex];
-			}
-		}
-		
-		// Not found
-		return null;
-	}
-	
-	/++
-	 + Sets the highlighted tool
-	 +/
-	void setHightlight(EditingTool tool) {
-		highlightTool = tool;
-		if(!(highlightTool is null)) {
-			import std.algorithm : countUntil;
-			int highlightIndex = tools.countUntil(highlightTool);
-			highlightCache.position.y = getY(highlightIndex);
-			selectionHighlightCache.position.y = highlightCache.position.y;
-		}
-	}
-	
-	/++
-	 + Sets the highlighted tool
-	 +/
-	void setActive(EditingTool tool) {
-		activeTool = tool;
-		if(!(activeTool is null)) {
-			import std.algorithm : countUntil;
-			int activeIndex = tools.countUntil(activeTool);
-			selectionCache.position.y = getY(activeIndex);
-			selectionHighlightCache.position.y = selectionCache.position.y;
-		}
-	}
-	
-	int getY(int index) const pure {
-		int result;
-		
-		int rowCount = index / width;
-		// Rounding up. Too lazy to convert to float, get std.math, etc.
-		if(tools.length % width > 0)
-			rowCount += 1;
-		
-		result = TOOL_HEIGHT * rowCount;
-		result += VERTICAL_PADDING * rowCount * 2;
-		result += BORDER_WIDTH * rowCount;
-		
-		return result;
-	}
-	
-	void updateCache() {
-		// Cache background
-		enum OUTLINE_COLOR = Color(0, 0, 0);
-		enum FACE_COLOR = Color(190, 180, 160);
-		enum SELECTION_FACE_COLOR = Color(231, 220, 193);
-		enum BORDER_COLOR = Color(0, 0, 0, 64);
-		enum HIGHLIGHT_COLOR = Color(255, 255, 255);
-		
-		auto boxSize = getBottomRight();
-		
-		auto outlineRect = FloatRect(-1, -1, boxSize.x + 2, boxSize.y + 2);
-		auto outlineVertices = outlineRect.toVertexArray();
-		outlineVertices.dye(OUTLINE_COLOR);
-		
-		auto faceRect = IntRect(0, 0, boxSize.x, boxSize.y);
-		auto faceVertices = faceRect.toVertexArray();
-		faceVertices.dye(FACE_COLOR);
-		
-		backgroundCache = new VertexCache();
-		backgroundCache.add(outlineVertices);
-		backgroundCache.add(faceVertices);
-		
-		// Cache selection sprite
-		outlineRect = FloatRect(-2, -2, TOOL_WIDTH + 4, TOOL_HEIGHT + 4);
-		outlineVertices = outlineRect.toVertexArray();
-		outlineVertices.dye(OUTLINE_COLOR);
-		
-		faceRect = IntRect(-1, -1, TOOL_WIDTH + 2, TOOL_HEIGHT + 2);
-		faceVertices = faceRect.toVertexArray();
-		faceVertices.dye(SELECTION_FACE_COLOR);
-		
-		selectionCache = new VertexCache();
-		selectionCache.add(outlineVertices);
-		selectionCache.add(faceVertices);
-		
-		// Cache selection highlight sprite
-		auto highlightVertices = faceRect.toVertexArray();
-		highlightVertices.dye(HIGHLIGHT_COLOR);
-		
-		selectionHighlightCache = new VertexCache();
-		selectionHighlightCache.add(highlightVertices);
-		
-		// Create highlight sprite
-		faceRect = IntRect(0, 0, TOOL_WIDTH, TOOL_HEIGHT);
-		highlightVertices = faceRect.toVertexArray();
-		highlightVertices.dye(HIGHLIGHT_COLOR);
-		
-		highlightCache = new VertexCache();
-		highlightCache.add(highlightVertices);
-		
-		// Cache icons, create border vertices
-		Vertex[] borderVertices;
-		
-		iconCache = new VertexCache();
-		iconCache.texture = &assets.textures[Asset.ToolsTexture];
-		int toolY = -BORDER_WIDTH;
-		foreach(int i, ref EditingTool tool; tools) {
-			if(i > 0) {
-				auto borderRect = IntRect(0, toolY, boxSize.x, BORDER_WIDTH);
-				borderVertices ~= borderRect.toVertexArray();
-			}
-			toolY += BORDER_WIDTH + VERTICAL_PADDING;
-			
-			if(tool == activeTool)
-				selectionCache.position.y = toolY;
-			
-			iconCache.add(tool.icon.vertices, Point(0, toolY));
-			toolY += TOOL_HEIGHT + VERTICAL_PADDING;
-		}
-		
-		borderVertices.dye(BORDER_COLOR);
-		backgroundCache.add(borderVertices);
-	}
-	
-	override void draw(RenderTarget renderTarget, RenderStates states) {
-		if(backgroundCache is null)
-			updateCache();
-		
-		// Draw background
-		renderTarget.draw(backgroundCache, states);
-		
-		// Draw highlight sprite
-		if(!(highlightTool is null) && !(highlightTool is activeTool)) {
-			renderTarget.draw(highlightCache, states);
-		}
-		
-		// Draw selection sprite
-		if(!(activeTool is null)) {
-			renderTarget.draw(selectionCache, states);
-			
-			// Draw highlight sprite
-			if(highlightTool is activeTool) {
-				renderTarget.draw(selectionHighlightCache, states);
-			}
-		}
-		
-		// Draw icons on top of everything
-		renderTarget.draw(iconCache, states);
-	}
-	
-	// Anchorable implementation
-	Point getTopLeft() {
-		return Point(0, 0);
-	}
-	
-	Point getBottomRight() {
-		Point size;
-		size.x = width * TOOL_WIDTH;
-		size.y = getY(tools.length) - BORDER_WIDTH;
-		
-		return size;
-	}
-	
-	bool isUnderPoint(Point p) {
-		immutable auto tl = getTopLeft();
-		immutable auto br = getBottomRight();
-		
-		// Check if inside bar
-		if(p.x >= tl.x && p.x < br.x && p.y >= tl.y && p.y < br.y)
-			return true;
-		
-		// Check if contained in the active tool sprite
-		if(activeTool) {
-			auto activeY = selectionCache.position.y;
-			if(p.x >= tl.x - 1 && p.y >= activeY - 1 && p.x < br.x + 1) {
-				if(p.y < activeY + TOOL_HEIGHT - BORDER_WIDTH + 1) {
-					return true;
-				}
-			}
-		}
-		
-		return false;
-	}
-}
-
-class EditingTool {
-	const(Tile)* icon;
-}
-
-class MazeEditorSettingsScreen : GameScreen {
+class EditorSettingsScreen : GameScreen {
 	MenuContext menuContext;
-	MazeEditorScreen editorScreen;
+	EditorScreen editorScreen;
 	Menu mainMenu;
 	
-	this(Game game, MazeEditorScreen screen) {
+	this(Game game, EditorScreen screen) {
 		super(game);
 		
 		// Create the menu

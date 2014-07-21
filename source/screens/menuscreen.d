@@ -8,9 +8,8 @@ import coursecontext;
 import game;
 import gamescreen;
 import input;
-import mazescreen;
-import mazeeditorscreen;
 import menu;
+import screens;
 import utility;
 
 enum MAZES_DIRECTORY = "mazes" ~ slash;
@@ -69,7 +68,7 @@ class MenuScreen : GameScreen {
 		// Editor menu item
 		auto editorMenuItem = menuContext.createMenuItem("Editor");
 		editorMenuItem.onActivate ~= {
-			auto editorScreen = new MazeEditorScreen(game);
+			auto editorScreen = new EditorScreen(game);
 			editorScreen.onQuit ~= { game.nextScreen = this; };
 			game.nextScreen = editorScreen;
 		};
