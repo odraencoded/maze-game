@@ -12,6 +12,22 @@ class GameScreen : Drawable {
 	}
 	
 	/++
+	 + Whether this is the current game screen.
+	 +/
+	final bool isActiveScreen() { return game.currentScreen == this; }
+	
+	/++
+	 + Called when this screen is about to become the game's current screen.
+	 +/
+	void appear() { }
+	
+	/++
+	 + Called when this screen is no longer the game's current screen.
+	 +/
+	void disappear() { }
+	
+	
+	/++
 	 + Updates the game by a delta rate.
 	 +/
 	abstract void cycle(in InputState input, in float delta);

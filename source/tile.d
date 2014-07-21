@@ -1,7 +1,7 @@
 import dsfml.graphics;
 
 class TextureMap {
-	const(Tile)[int] pieces;
+	const(Tile)*[int] pieces;
 	immutable Vector2i tileSize;
 	
 	/++
@@ -11,7 +11,7 @@ class TextureMap {
 		this.tileSize = tileSize;
 	}
 	
-	ref const(Tile) opIndex(int key) const {
+	const(Tile)* opIndex(int key) const {
 		return pieces[key];
 	}
 	
@@ -43,17 +43,17 @@ class TextureMap {
 	/++
 	 + Adds a tile with key key.
 	 +/
-	void addPiece(in int key, in Tile piece) {
+	void addPiece(in int key, in Tile* piece) {
 		pieces[key] = piece;
 	}
 }
 
-class Tile {
-	Vertex[] vertices;
+struct Tile {
+	Vertex[] vertices = void;
 	Vector2f origin;
 	
 	this(in IntRect rect, in Vector2f origin) immutable {
-		vertices = rect.toVertexArray(origin);
+		vertices = rect.toTexturedVertices(origin).idup;
 		this.origin = origin;
 	}
 }
@@ -90,19 +90,69 @@ class VertexCache : Drawable {
 		}
 	}
 	
-	void setColor(in Color color) {
-		foreach(ref Vertex aVertex; vertices)
-			aVertex.color = color;
+	void setColor(in Color color) pure {
+		vertices.dye(color);
 	}
 	
 	void draw(RenderTarget target, RenderStates states) {
-		states.texture = *texture;
+		// Set texture
+		if(texture)
+			states.texture = *texture;
+		
+		// Move to position
 		states.transform.translate(position.x, position.y);
+		
+		// Render
 		target.draw(vertices, PrimitiveType.Quads, states);
 	}
 }
 
-immutable(Vertex)[] toVertexArray(T)(in Rect!T box, in Vector2f origin) {
+/++
+ + Draws a tiled texture spanning over the whole view(screen).
+ +/
+class Backdrop : Drawable {
+	const(Texture)* texture;
+	
+	this(in Texture* texture) {
+		this.texture = texture;
+	}
+	
+	void draw(RenderTarget target, RenderStates states) {
+		states.texture = *texture;
+		Backdrop.render(target, states);
+	}
+	
+	static void render(RenderTarget target, RenderStates states) {
+		// Copy paste ALL THE THINGS!!!
+		immutable auto viewSize = target.view.size;
+		immutable auto viewCenter = target.view.center;
+		immutable auto halfViewSize = viewSize / 2;
+		
+		immutable auto top    = viewCenter.y - halfViewSize.y;
+		immutable auto left   = viewCenter.x - halfViewSize.x;
+		immutable auto bottom = viewCenter.y + halfViewSize.y;
+		immutable auto right  = viewCenter.x + halfViewSize.x;
+		
+		immutable auto topLeft     = Vector2f(left , top   );
+		immutable auto topRight    = Vector2f(right, top   );
+		immutable auto bottomRight = Vector2f(right, bottom);
+		immutable auto bottomLeft  = Vector2f(left , bottom);
+		
+		immutable Vertex[] vertices = [
+			Vertex(topLeft    , topLeft    ), Vertex(topRight   , topRight   ),
+			Vertex(bottomRight, bottomRight), Vertex(bottomLeft , bottomLeft )
+		];
+		
+		target.draw(vertices, PrimitiveType.Quads, states);
+	}
+}
+
+/++
+ + Returns a vertex rectangle with its texcoords mapped to box.
+ + The top left of the rectangle is origin, the bottom right is the box size.
+ +/
+Vertex[]
+toTexturedVertices(T)(in Rect!T box, in Vector2f origin = Vector2f(0, 0)) {
 	// Get the frame dimensions
 	immutable auto tl = Vector2f(0        , 0         );
 	immutable auto tr = Vector2f(box.width, 0         );
@@ -118,4 +168,26 @@ immutable(Vertex)[] toVertexArray(T)(in Rect!T box, in Vector2f origin) {
 		Vertex(tl - origin, p + tl), Vertex(tr - origin, p + tr),
 		Vertex(br - origin, p + br), Vertex(bl - origin, p + bl), 
 	];
+}
+
+
+/++
+ + Returns a vertex rectangle based on the box position and size.
+ +/
+Vertex[] toVertexArray(T)(in Rect!T box) {
+	// Get the frame dimensions
+	immutable auto top = box.top;
+	immutable auto left = box.left;
+	immutable auto bottom = box.top + box.height;
+	immutable auto right = box.left + box.width;
+	
+	return [
+		Vertex(Vector2f(left , top   )), Vertex(Vector2f(right, top   )),
+		Vertex(Vector2f(right, bottom)), Vertex(Vector2f(left , bottom))
+	];
+}
+
+void dye(ref Vertex[] vertices, in Color color) pure {
+	foreach(ref Vertex aVertex; vertices)
+		aVertex.color = color;
 }

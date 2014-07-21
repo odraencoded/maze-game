@@ -8,8 +8,8 @@ import coursecontext;
 import game;
 import gamescreen;
 import input;
-import mazescreen;
 import menu;
+import screens;
 import utility;
 
 enum MAZES_DIRECTORY = "mazes" ~ slash;
@@ -27,7 +27,7 @@ class MenuScreen : GameScreen {
 		
 		menuContext = new MenuContext(game.assets);
 		
-		availableCourses = loadCourses(MAZES_DIRECTORY);
+		availableCourses = Course.SearchDirectory(MAZES_DIRECTORY);
 		auto courseTitles = new string[availableCourses.length];
 		foreach(int i, Course aCourse; availableCourses) {
 			courseTitles[i] = aCourse.info.title;
@@ -57,18 +57,28 @@ class MenuScreen : GameScreen {
 		courseMenuItems ~= menuContext.createMenuItems(["Go back"]);
 		courseMenu.items = courseMenuItems;
 		
-		auto mainMenuTexts = ["Play", "Exit"];
-		auto mainMenu = new Menu();
-		mainMenu.items = menuContext.createMenuItems(mainMenuTexts);
-		
+		// Create main menu 
 		// Play menu item
-		mainMenu.items[0].onActivate ~= {
+		auto playMenuItem = menuContext.createMenuItem("Play");
+		playMenuItem.onActivate ~= {
 			menuContext.currentMenu = courseMenu;
 			menuContext.selection = 0;
 		};
 		
+		// Editor menu item
+		auto editorMenuItem = menuContext.createMenuItem("Editor");
+		editorMenuItem.onActivate ~= {
+			auto editorScreen = new EditorScreen(game);
+			editorScreen.onQuit ~= { game.nextScreen = this; };
+			game.nextScreen = editorScreen;
+		};
+		
 		// Exit menu item
-		mainMenu.items[1].onActivate ~= { game.isRunning = false; };
+		auto exitMenuItem = menuContext.createMenuItem("Exit");
+		exitMenuItem.onActivate ~= { game.isRunning = false; };
+		
+		auto mainMenu = new Menu();
+		mainMenu.items = [playMenuItem, editorMenuItem, null, exitMenuItem];
 		
 		// Pressing esc on course menu or activating "go back"
 		auto goBackToMainMenu = {

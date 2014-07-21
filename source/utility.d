@@ -6,13 +6,13 @@ bool hasFlag(in int value, in int flag) pure nothrow @safe {
 }
 
 /**
- * Returns an array of ints each representing a bit flag set in value.
+ * Returns an array of T each representing a bit flag set in value.
  */
-int[] getFlags(T)(in T value) pure nothrow @safe {
-	int[] foundFlags;
+T[] getFlags(T)(in T value) pure nothrow {
+	T[] foundFlags;
 	for(int i = 1; i < T.max; i *= 2) {
 		if(value.hasFlag(i))
-			foundFlags ~= i;
+			foundFlags ~= cast(T)i;
 	}
 	return foundFlags;
 }

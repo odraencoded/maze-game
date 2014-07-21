@@ -1,0 +1,8 @@
+title: The Basics
+url: https://github.com/odraencoded/maze-game
+authors:
+- odra
+stages:
+- Basics/Doors.maze
+- Basics/Limits.maze
+- Basics/Locks.maze

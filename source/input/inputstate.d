@@ -1,6 +1,7 @@
 import std.algorithm;
 
 import dsfml.window.keyboard;
+import dsfml.window.mouse;
 
 import commands;
 import geometry;
@@ -10,9 +11,11 @@ import utility;
  + A class to keep track of the user input
  +/
 class InputState {
-	int[int] bindings;
-	
+	Command[Keyboard.Key] keyBindings;
+	Command[Mouse.Button] buttonBindings;
+	MovingPoint pointer;
 	bool close, lostFocus;
+	dstring newText;
 	
 	this() {
 		_command_input = new OnOffState[Command.max + 1];
@@ -34,6 +37,24 @@ class InputState {
 			state = Side.None;
 	}
 	
+	// Indexing for getting the state of stuff because it is neat.
+	OnOffState opIndex(in Command command) const pure @safe {
+		return getCommand(command);
+	}
+	OnOffState opIndex(in Keyboard.Key key) const {
+		return getKey(key);
+	}
+	OnOffState opIndex(in Mouse.Button button) const {
+		return getButton(button);
+	}
+	
+	/++
+	 + Gets the state of a command
+	 +/
+	OnOffState getCommand(in Command command) pure const @safe {
+		return _command_input[command];
+	}
+	
 	/++
 	 + Gets the state of a keyboard key.
 	 +/
@@ -47,14 +68,25 @@ class InputState {
 		}
 	}
 	
-	OnOffState opIndex(in int command) const pure @safe {
-		return _command_input[command];
+	/++
+	 + Gets the state of a mouse button
+	 +/
+	OnOffState getButton(in Mouse.Button button) const  {
+		if(Mouse.isButtonPressed(button)) {
+			if(canFind(_changed_button_input, button))
+				return OnOffState.TurnedOn;
+			else return OnOffState.On;
+		} else {
+			if(canFind(_changed_button_input, button))
+				return OnOffState.TurnedOff;
+			else return OnOffState.Off;
+		}
 	}
 	
 	/++
 	 + Whether a given command is turned on.
 	 +/
-	bool isOn(in int command) const pure @safe {
+	bool isOn(in Command command) const pure @safe {
 		return _command_input[command].hasFlag(OnOffState.On);
 	}
 	
@@ -62,7 +94,7 @@ class InputState {
 	 + Whether a given command has been turned on this cycle,
 	 + e.g. it was off in the previous cycle.
 	 +/
-	bool wasTurnedOn(in int command) const pure @safe {
+	bool wasTurnedOn(in Command command) const pure @safe {
 		return _command_input[command].hasFlag(OnOffState.TurnedOn);
 	}
 	
@@ -70,7 +102,7 @@ class InputState {
 	 + Whether a given command has been turned off this cycle,
 	 + e.g. it was on in the previous cycle.
 	 +/
-	bool wasTurnedOff(in int command) const pure @safe {
+	bool wasTurnedOff(in Command command) const pure @safe {
 		return _command_input[command].hasFlag(OnOffState.TurnedOff);
 	}
 	
@@ -103,6 +135,21 @@ class InputState {
 		return getKey(key).hasFlag(OnOffState.TurnedOff);
 	}
 	
+	/++
+	 + Same stuff as above but with buttons.
+	 +/
+	bool isButtonOn(in Mouse.Button button) const {
+		return getButton(button).hasFlag(OnOffState.On);
+	}
+	
+	bool wasButtonTurnedOn(in Mouse.Button button) const {
+		return getButton(button).hasFlag(OnOffState.TurnedOn);
+	}
+	
+	bool wasButtonTurnedOff(in Mouse.Button button) const {
+		return getButton(button).hasFlag(OnOffState.TurnedOff);
+	}
+	
 	Side getSystemSides(in OnOffState state) const {
 		Side result;
 		foreach(Keyboard.Key aKey, Side aSide; DIRECTIONAL_KEYS) {
@@ -133,8 +180,8 @@ class InputState {
 	/++
 	 + Binds a keyboard key to a given command.
 	 +/
-	void bind(in int key, in int value) pure nothrow @safe {
-		bindings[key] = value;
+	void bind(in Keyboard.Key key, in Command value) pure nothrow @safe {
+		keyBindings[key] = value;
 	}
 	
 	/++
@@ -147,29 +194,79 @@ class InputState {
 		
 		close = lostFocus = false;
 		
+		// Clear changed key/button
 		_changed_key_input.length = 0;
+		_changed_button_input.length = 0;
+		
+		// Clear text input
+		newText = "";
+	}
+	
+	/++
+	 + Turns a key on or off.
+	 + State should be either On or Off. Duh.
+	 +/
+	void turnKey(in Keyboard.Key key, OnOffState state) pure @safe
+	in { assert(state == OnOffState.On || state == OnOffState.Off); }
+	body {
+		// Update _command_input if the key is bound to something
+		Command* value = key in keyBindings;
+		if(value) {
+			auto commandValue = &_command_input[*value];
+			// The command must not be <state> already
+			if(!hasFlag(*commandValue, state))
+				*commandValue = OnOffState.Changed | state;
+		}
+		
+		// Set the key as changed
+		_changed_key_input ~= key;
 	}
 	
 	/++
 	 + Sets a key as pressed.
 	 +/
-	void pressKey(in int key) pure @safe {
-		int* value = key in bindings;
-		if(value && !_command_input[*value].hasFlag(OnOffState.On))
-			_command_input[*value] = OnOffState.TurnedOn;
-		
-		_changed_key_input ~= key;
+	void pressKey(in Keyboard.Key key) pure @safe {
+		turnKey(key, OnOffState.On);
 	}
 	
 	/++
 	 + Sets a key as released.
 	 +/
-	void releaseKey(in int key) pure @safe {
-		int* value = key in bindings;
-		if(value && !_command_input[*value].hasFlag(OnOffState.Off))
-			_command_input[*value] = OnOffState.TurnedOff;
+	void releaseKey(in Keyboard.Key key) pure @safe {
+		turnKey(key, OnOffState.Off);
+	}
+	
+	/++
+	 + Mouse button equivalent of turnKey
+	 +/
+	void turnButton(in Mouse.Button button, OnOffState state) pure @safe
+	in { assert(state == OnOffState.On || state == OnOffState.Off); }
+	body {
+		// Update _command_input if the button is bound to something
+		Command* value = button in buttonBindings;
+		if(value) {
+			auto commandValue = &_command_input[*value];
+			// The command must not be <state> already
+			if(!hasFlag(*commandValue, state))
+				*commandValue = OnOffState.Changed | state;
+		}
 		
-		_changed_key_input ~= key;
+		// Set the key as changed
+		_changed_button_input ~= button;
+	}
+	
+	/++
+	 + Sets a button as pressed.
+	 +/
+	void pressButton(in Mouse.Button button) pure @safe {
+		turnButton(button, OnOffState.On);
+	}
+	
+	/++
+	 + Sets a button as pressed.
+	 +/
+	void releaseButton(in Mouse.Button button) pure @safe {
+		turnButton(button, OnOffState.Off);
 	}
 	
 	/++
@@ -189,7 +286,9 @@ class InputState {
 	private {
 		OnOffState[] _command_input;
 		Side[OnOffState] _directional_input;
-		// What keyboard keys changed in a cycle
-		int[] _changed_key_input;
+		
+		// What keyboard keys and mouse buttons changed in a cycle
+		Keyboard.Key[] _changed_key_input;
+		Mouse.Button[] _changed_button_input;
 	}
 }

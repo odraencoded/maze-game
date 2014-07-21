@@ -3,6 +3,7 @@ import std.path: slash = dirSeparator;
 
 import dsfml.graphics;
 
+import assetcodes;
 import game;
 import input;
 import menu;
@@ -29,6 +30,7 @@ class MenuContext : Drawable {
 	Font menuFont;
 	
 	TileSprite selectorSprite;
+	bool lockSelector;
 	
 	this(GameAssets assets) {
 		menuFont = assets.menuFont;
@@ -37,7 +39,7 @@ class MenuContext : Drawable {
 		selectorSprite.texture = &assets.textures[Asset.SymbolTexture];
 		
 		auto symbolMap = assets.maps[Asset.SymbolMap];
-		selectorSprite.piece = &symbolMap[SymbolMapKeys.MenuSelector];
+		selectorSprite.piece = symbolMap[SymbolMapKeys.MenuSelector];
 	}
 	
 	MenuItem[] createMenuItems(string[] strings) {
@@ -50,6 +52,14 @@ class MenuContext : Drawable {
 	}
 	
 	MenuItem createMenuItem(string aString) {
+		auto newText = createText(aString);
+		
+		auto newItem = new MenuItem();
+		newItem.text = newText;
+		return newItem;
+	}
+	
+	Text createText(string aString = "") {
 		auto newText = new Text();
 		
 		newText.setFont(menuFont);
@@ -57,13 +67,57 @@ class MenuContext : Drawable {
 		newText.setColor(MENU_TEXT_COLOR);
 		newText.setString(aString.to!dstring);
 		
-		auto newItem = new MenuItem();
-		newItem.text = newText;
-		return newItem;
-		
+		return newText;
 	}
 	
 	void cycle(in InputState input, in float delta) {
+		if(!lockSelector)
+			cycleSelector(input, delta);
+		
+		// Cycle items
+		foreach(MenuItem anItem; currentMenu.items) {
+			if(anItem)
+				anItem.cycle(input, delta);
+		}
+	}
+	
+	void draw(RenderTarget renderTarget, RenderStates states) {
+		RenderStates selectorStates;
+		selectorStates.transform.translate(SELECTOR_X, SELECTOR_Y);
+		
+		renderTarget.draw(selectorSprite, selectorStates);
+		
+		RenderStates menuStates;
+		menuStates.transform.translate(MENU_X, MENU_Y);
+		menuStates.transform.translate(0, selection * MENU_ITEM_HEIGHT * -1);
+		
+		foreach(MenuItem anItem; currentMenu.items) {
+			if(anItem) {
+				renderTarget.draw(anItem.text, menuStates);
+			}
+			menuStates.transform.translate(0, MENU_ITEM_HEIGHT);
+		}
+	}
+	
+	/++
+	 + Gets which item is currently selected.
+	 +/
+	ref MenuItem selectedItem() pure @property {
+		return currentMenu.items[selection];
+	}
+	
+	/++
+	 + Sets selection to a given item
+	 +/
+	void selectedItem(MenuItem item) @property {
+		import std.algorithm;
+		
+		immutable auto newIndex = currentMenu.items.countUntil(item);
+		if(newIndex != -1)
+			selection = newIndex;
+	}
+	
+	void cycleSelector(in InputState input, in float delta) {
 		// Get whether the selection changed
 		int selectionChange;
 		immutable auto systemInput = input.getSystemOffset(OnOffState.TurnedOn);
@@ -97,24 +151,6 @@ class MenuContext : Drawable {
 			currentMenu.onCancel(currentMenu);
 		}
 	}
-	
-	void draw(RenderTarget renderTarget, RenderStates states) {
-		RenderStates selectorStates;
-		selectorStates.transform.translate(SELECTOR_X, SELECTOR_Y);
-		
-		renderTarget.draw(selectorSprite, selectorStates);
-		
-		RenderStates menuStates;
-		menuStates.transform.translate(MENU_X, MENU_Y);
-		menuStates.transform.translate(0, selection * MENU_ITEM_HEIGHT * -1);
-		
-		foreach(MenuItem anItem; currentMenu.items) {
-			if(anItem) {
-				renderTarget.draw(anItem.text, menuStates);
-			}
-			menuStates.transform.translate(0, MENU_ITEM_HEIGHT);
-		}
-	}
 }
 
 class Menu {
@@ -125,4 +161,105 @@ class Menu {
 class MenuItem {
 	Text text;
 	Signal!(MenuItem) onActivate;
+	void cycle(in InputState input, in float delta) {}
+}
+
+/++
+ + A menu item that can edit texts.
+ +/
+class TextEntryMenuItem : MenuItem {
+	import textreceiver;
+	
+	MenuContext menuContext;
+	TextReceiver textReceiver;
+	dstring prefix;
+	bool typingText, instantSwitchBackGuard;
+	
+	enum CARET_FLASHING_RATE = 0.8f; // 800ms
+	float caredAnimation = 0;
+	
+	this(
+		Text text,
+		MenuContext context,
+		dstring prefix = "",
+		dstring current = ""
+	) {
+		this.text = text;
+		this.menuContext = context;
+		this.prefix = prefix;
+		this.textReceiver = new TextReceiver(current);
+		refreshText();
+		
+		onActivate ~= &beginTextEntry;
+		
+		textReceiver.onChange ~= {
+			caredAnimation = 0;
+			refreshText();
+		};
+		
+		textReceiver.onEscape ~= {
+			textReceiver.cancelEdits();
+			exitTextEntry();
+		};
+		
+		textReceiver.onReturn ~= {
+			if(instantSwitchBackGuard == false) {
+				textReceiver.saveText();
+				exitTextEntry();
+			}
+		};
+	}
+	
+	override void cycle(in InputState input, in float delta) {
+		if(!typingText)
+			return;
+		
+		// Update text received
+		textReceiver.cycle(input);
+		
+		// Update caret animation
+		caredAnimation = (caredAnimation + delta) % CARET_FLASHING_RATE;
+		
+		refreshText();
+		
+		// Unlock instant switch back guard
+		instantSwitchBackGuard = false;
+	}
+	
+	/++
+	 + Gets the text input into the menu item
+	 +/
+	dstring typedText() @property {
+		return textReceiver.currentText;
+	}
+	
+	void refreshText() {
+		// Refresh text graphic
+		if(caredAnimation > CARET_FLASHING_RATE / 2)
+			text.setString(this.prefix ~ textReceiver.currentText ~ "_");
+		else
+			text.setString(this.prefix ~ textReceiver.currentText);
+	}
+	
+	/++
+	 + Enter typing text mode
+	 +/
+	void beginTextEntry() {
+		// This is set so that if the enter key was pressed to activate
+		// this item, it won't cause for the item to instantly return
+		// on the the onReturn signal
+		instantSwitchBackGuard = true;
+		menuContext.lockSelector = true;
+		typingText = true;
+	}
+	
+	/++
+	 + Exits typing text mode
+	 +/
+	void exitTextEntry() {
+		typingText = false;
+		menuContext.lockSelector = false;
+		caredAnimation = 0;
+		refreshText();
+	}
 }

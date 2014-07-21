@@ -32,10 +32,11 @@ void main(string[] args) {
 	auto goToMenu = { mazeGame.nextScreen = new MenuScreen(mazeGame); };
 	if(args.length > 1) {
 		import coursecontext;
-		import course : loadCourse;
-		Game realGame = mazeGame;
-		auto course = loadCourse(args[1]);
-		auto context = new CourseContext(realGame , course);
+		import course;
+		
+		auto courseFilename = args[1];
+		auto loadedCourse = Course.FromDisk(courseFilename);
+		auto context = new CourseContext(mazeGame, loadedCourse);
 		
 		context.startPlaying();
 		
@@ -59,7 +60,7 @@ void main(string[] args) {
 		// Checking events
 		input.prepareCycle();
 		
-		import dsfml.window.event : Event;
+		import dsfml.window: Event, Keyboard, Mouse;
 		Event event;
 		while(window.pollEvent(event)) {
 			switch(event.type) {
@@ -75,11 +76,27 @@ void main(string[] args) {
 				
 				// Register input
 				case(Event.EventType.KeyPressed):
-					input.pressKey(event.key.code);
+					immutable auto keyCode = event.key.code;
+					input.pressKey(cast(Keyboard.Key)keyCode);
 					break;
 				
 				case(Event.EventType.KeyReleased):
-					input.releaseKey(event.key.code);
+					immutable auto keyCode = event.key.code;
+					input.releaseKey(cast(Keyboard.Key)keyCode);
+					break;
+				
+				case(Event.EventType.MouseButtonPressed):
+					immutable auto buttonCode = event.mouseButton.button;
+					input.pressButton(cast(Mouse.Button)buttonCode);
+					break;
+				
+				case(Event.EventType.MouseButtonReleased):
+					immutable auto buttonCode = event.mouseButton.button;
+					input.releaseButton(cast(Mouse.Button)buttonCode);
+					break;
+				
+				case(Event.EventType.TextEntered):
+					input.newText ~= event.text.unicode;
 					break;
 				
 				case(Event.EventType.LostFocus):
@@ -89,6 +106,11 @@ void main(string[] args) {
 				default:
 			}
 		}
+		
+		// Update mouse
+		immutable auto windowPointer = Mouse.getPosition(mazeGame.window);
+		immutable auto gamePointer = mazeGame.resizer.scalePoint(windowPointer);
+		input.pointer.move(gamePointer);
 		
 		input.finishCycle();
 		
@@ -122,11 +144,23 @@ void main(string[] args) {
 		
 		// Changing screens
 		if(mazeGame.nextScreen) {
-			mazeGame.currentScreen = mazeGame.nextScreen;
-			mazeGame.nextScreen = null;
+			mazeGame.currentScreen.disappear();
 			
-			// Reset input so that it's not carried on to the next screen
-			input.reset();
+			// In case .disappear() forces the screen to remain the same
+			if(mazeGame.nextScreen != mazeGame.currentScreen) {
+				import gamescreen : GameScreen;
+				GameScreen nextScreen;
+				do {
+					nextScreen = mazeGame.nextScreen;
+					nextScreen.appear();
+				} while(nextScreen != mazeGame.nextScreen);
+				
+				mazeGame.currentScreen = mazeGame.nextScreen;
+				mazeGame.nextScreen = null;
+				
+				// Reset input so that it's not carried on to the next screen
+				input.reset();
+			}
 		}
 		
 		// Cleaning up the trash
@@ -167,6 +201,7 @@ private auto setupInput() {
 private void loadAssets(Game mazeGame) {
 	import dsfml.graphics;
 	
+	import assetcodes;
 	import tile;
 	
 	enum ASSETS_DIRECTORY = "assets" ~ slash;
@@ -190,10 +225,14 @@ private void loadAssets(Game mazeGame) {
 		texturePaths[Asset.WallForegroundTexture] = SPRITES_DIRECTORY ~ "wall-foreground.png";
 		texturePaths[Asset.WallOutlineTexture] = SPRITES_DIRECTORY ~ "wall-outline.png";
 		texturePaths[Asset.SymbolTexture] = SPRITES_DIRECTORY ~ "symbol.png";
+		texturePaths[Asset.ToolsTexture] = SPRITES_DIRECTORY ~ "tools.png";
+		
+		texturePaths[Asset.BlueprintBG] = SPRITES_DIRECTORY ~ "blueprint-bg.png";
 		
 		foreach(Asset aKey, string aTexturePath; texturePaths) {
 			auto newTexture = new Texture();
 			newTexture.loadFromFile(aTexturePath);
+			newTexture.setRepeated(true);
 			assets.textures[aKey] = newTexture;
 		}
 		
@@ -232,6 +271,18 @@ private void loadAssets(Game mazeGame) {
 		auto symbolMap = new TextureMap(Point(16, 16));
 		assets.maps[Asset.SymbolMap] = symbolMap;
 		
-		symbolMap.addPiece(SymbolMapKeys.MenuSelector , Point(0, 0));
+		symbolMap.addPiece(SymbolMapKeys.MenuSelector, Point(0, 0));
+		symbolMap.addPiece(SymbolMapKeys.SquareCursor, IntRect(1, 0, 3, 3), Vector2f(1, 1));
+		
+		auto toolsMap = new TextureMap(Point(16, 16));
+		assets.maps[Asset.ToolsMap] = toolsMap;
+		
+		toolsMap.addPiece(ToolsMapKeys.SelectionTool, Point(0, 0));
+		toolsMap.addPiece(ToolsMapKeys.WallTool, Point(1, 0));
+		toolsMap.addPiece(ToolsMapKeys.PusherTool, Point(2, 0));
+		toolsMap.addPiece(ToolsMapKeys.ExitTool, Point(3, 0));
+		toolsMap.addPiece(ToolsMapKeys.EraserTool, Point(0, 1));
+		toolsMap.addPiece(ToolsMapKeys.GlueTool, Point(1, 1));
+		toolsMap.addPiece(ToolsMapKeys.TrashTool, Point(0, 2));
 	}
 }
