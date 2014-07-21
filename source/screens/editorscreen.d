@@ -555,12 +555,14 @@ class EditorSettingsScreen : GameScreen {
 		string[] mazeFilepaths;
 		
 		// Fetch .maze file names
-		auto fileList = dirEntries(EDITOR_DIRECTORY, SpanMode.breadth);
-		foreach(DirEntry anEntry; fileList) {
-			if(anEntry.isFile) {
-				auto aFilepath = anEntry.name.absolutePath;
-				if(aFilepath.extension == MAZE_EXTENSION) {
-					mazeFilepaths ~= aFilepath;
+		if(EDITOR_DIRECTORY.exists) {
+			auto fileList = dirEntries(EDITOR_DIRECTORY, SpanMode.breadth);
+			foreach(DirEntry anEntry; fileList) {
+				if(anEntry.isFile) {
+					auto aFilepath = anEntry.name.absolutePath;
+					if(aFilepath.extension == MAZE_EXTENSION) {
+						mazeFilepaths ~= aFilepath;
+					}
 				}
 			}
 		}

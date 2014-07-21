@@ -68,6 +68,8 @@ class MenuScreen : GameScreen {
 	}
 	
 	void showPlayMenu() {
+		import std.file;
+		
 		// Setup play course callback
 		Course[MenuItem] menuItemsToCourses;
 		auto playCourse = (MenuItem selectedMenuItem) {
@@ -85,14 +87,16 @@ class MenuScreen : GameScreen {
 		auto courseMenu = new Menu();
 		
 		// Search for courses and add them to course menu
+		if(MAZES_DIRECTORY.exists) {
 		auto availableCourses = Course.SearchDirectory(MAZES_DIRECTORY);
-		foreach(int i, Course aCourse; availableCourses) {
-			auto aCourseTitle = aCourse.info.title;
-			auto aCourseMenuItem = menuContext.createMenuItem(aCourseTitle);
-			aCourseMenuItem.onActivate ~= playCourse;
-			
-			menuItemsToCourses[aCourseMenuItem] = aCourse;
-			courseMenu.items ~= aCourseMenuItem;
+			foreach(int i, Course aCourse; availableCourses) {
+				auto aCourseTitle = aCourse.info.title;
+				auto aCourseMenuItem = menuContext.createMenuItem(aCourseTitle);
+				aCourseMenuItem.onActivate ~= playCourse;
+				
+				menuItemsToCourses[aCourseMenuItem] = aCourse;
+				courseMenu.items ~= aCourseMenuItem;
+			}
 		}
 		
 		// Add a space

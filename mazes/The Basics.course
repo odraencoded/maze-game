@@ -6,3 +6,4 @@ stages:
 - Basics/Doors.maze
 - Basics/Limits.maze
 - Basics/Locks.maze
+- Basics/Co-op.maze
