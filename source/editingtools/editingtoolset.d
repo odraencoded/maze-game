@@ -2,8 +2,10 @@ import dsfml.graphics;
 
 import anchoring;
 import assetcodes;
+import editorscreen;
 import game : GameAssets;
 import geometry;
+import input;
 import tile;
 
 /++
@@ -26,6 +28,11 @@ class EditingToolSet : DisplayObject!int {
 	
 	this(GameAssets assets) {
 		this.assets = assets;
+	}
+	
+	void cycle(in InputState input, in float delta) {
+		foreach(EditingTool aTool; tools) 
+			aTool.cycle(input, delta);
 	}
 	
 	/++
@@ -75,12 +82,30 @@ class EditingToolSet : DisplayObject!int {
 	 + Sets the highlighted tool
 	 +/
 	void setActive(EditingTool tool) {
+		
+		if(activeTool) {
+			if(tool == activeTool) {
+				tool.activate();
+				return;
+			} else {
+				activeTool.deactivate();
+				activeTool.isActive = false;
+			}
+		}
+		
 		activeTool = tool;
-		if(!(activeTool is null)) {
+		
+		if(activeTool) {
 			import std.algorithm : countUntil;
 			int activeIndex = tools.countUntil(activeTool);
-			selectionCache.position.y = getY(activeIndex);
-			selectionHighlightCache.position.y = selectionCache.position.y;
+			
+			if(selectionCache) {
+				selectionCache.position.y = getY(activeIndex);
+				selectionHighlightCache.position.y = selectionCache.position.y;
+			}
+			
+			activeTool.activate();
+			activeTool.isActive = true;
 		}
 	}
 	
@@ -236,4 +261,14 @@ class EditingToolSet : DisplayObject!int {
 
 class EditingTool {
 	const(Tile)* icon;
+	bool isActive;
+	void cycle(in InputState input, in float delta) {
+		if(isActive)
+			cycleActive(input, delta);
+	}
+	
+	void cycleActive(in InputState input, in float delta) {}
+	
+	void activate() { }
+	void deactivate() { }
 }

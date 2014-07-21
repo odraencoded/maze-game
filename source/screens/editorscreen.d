@@ -64,26 +64,13 @@ class EditorScreen : GameScreen {
 		
 		// Create tools
 		auto toolsMap = gameAssets.maps[Asset.ToolsMap];
-		selectionTool = new EditingTool();
-		selectionTool.icon = toolsMap[ToolsMapKeys.SelectionTool];
-		
-		eraserTool = new EditingTool();
-		eraserTool.icon = toolsMap[ToolsMapKeys.EraserTool];
-		
-		trashTool = new EditingTool();
-		trashTool.icon = toolsMap[ToolsMapKeys.TrashTool];
-		
-		wallTool = new EditingTool();
-		wallTool.icon = toolsMap[ToolsMapKeys.WallTool];
-		
-		glueTool = new EditingTool();
-		glueTool.icon = toolsMap[ToolsMapKeys.GlueTool];
-		
-		pusherTool = new EditingTool();
-		pusherTool.icon = toolsMap[ToolsMapKeys.PusherTool];
-		
-		exitTool = new EditingTool();
-		exitTool.icon = toolsMap[ToolsMapKeys.ExitTool];
+		selectionTool = new SelectionTool(this, toolsMap);
+		eraserTool = new EraserTool(this, toolsMap);
+		trashTool = new TrashTool(this, toolsMap);
+		wallTool = new WallTool(this, toolsMap);
+		glueTool = new GlueTool(this, toolsMap);
+		pusherTool = new PusherTool(this, toolsMap);
+		exitTool = new ExitTool(this, toolsMap);
 		
 		toolset.tools = [
 			selectionTool, eraserTool, trashTool,
@@ -91,7 +78,7 @@ class EditorScreen : GameScreen {
 			pusherTool, exitTool
 		];
 		
-		toolset.activeTool = selectionTool;
+		toolset.setActive(selectionTool);
 		
 		toolsetAnchor = toolset.createAnchor();
 		toolsetAnchor.side = Side.TopAndRight;
@@ -262,18 +249,7 @@ class EditorScreen : GameScreen {
 		if(input.wasButtonTurnedOn(SELECT_BUTTON)) {
 			// Sets the active tool on click
 			if(highlightTool) {
-				if(toolset.activeTool == highlightTool) {
-					// Double click, or rather, clicking twice
-					if(highlightTool == trashTool) {
-						trashSelection();
-					} else if(highlightTool == glueTool) {
-						glueSelection();
-					} else if(highlightTool == eraserTool) {
-						eraseSelection();
-					}
-				} else {
-					toolset.setActive(highlightTool);
-				}
+				toolset.setActive(highlightTool);
 			}
 		}
 		
@@ -309,59 +285,11 @@ class EditorScreen : GameScreen {
 		}
 		
 		// Updating selected block & object
-		if(toolset.activeTool == selectionTool) {
-			checkSelectionTool(input, delta);
-		} else if(toolset.activeTool == trashTool) {
-			if(activateOnBlock) {
-				setSelection(gridPointer.current);
-				trashSelection();
-			}
-		} else if(toolset.activeTool == glueTool) {
-			if(activateOnBlock) {
-				// Refresh selection
-				setSelection(gridPointer.current);
-				glueSelection();
-			}
-		} else if(toolset.activeTool == wallTool) {
-			checkWallTool(input, delta);
-		} else if(toolset.activeTool == eraserTool) {
-			if(activateOnBlock) {
-				setSelection(gridPointer.current);
-				eraseSelection();
-			}
-		} else if(toolset.activeTool == pusherTool) {
-			if(input.wasButtonTurnedOn(SELECT_BUTTON)) {
-				// Add a new pusher
-				auto newPusher = new Pusher();
-				newPusher.position = gridPointer.current;
-				context.stage.pushers ~= newPusher;
-				
-				// Select pusher
-				selectedObject = newPusher.getEditable(context);
-				selectedBlock = newPusher.position;
-				
-				// Switch to selection mode
-				toolset.setActive(selectionTool);
-			}
-		}
-		else if(toolset.activeTool == exitTool) {
-			if(input.wasButtonTurnedOn(SELECT_BUTTON)) {
-				// Add a new pusher
-				auto newExit = new Exit();
-				newExit.position = gridPointer.current;
-				context.stage.exits ~= newExit;
-				
-				// Select pusher
-				selectedObject = newExit.getEditable(context);
-				selectedBlock = newExit.position;
-				
-				// Switch to selection mode
-				toolset.setActive(selectionTool);
-			}
-		}
+		toolset.cycle(input, delta);
 		
 		if(input.wasKeyTurnedOn(Keyboard.Key.Delete)) {
-			trashSelection();
+			if(selectedObject)
+				trash(selectedObject);
 		}
 	}
 	
@@ -388,122 +316,6 @@ class EditorScreen : GameScreen {
 		renderTarget.draw(toolsetAnchor);
 	}
 	
-	void checkSelectionTool(in InputState input, in float delta) {
-		if(input.wasButtonTurnedOn(SELECT_BUTTON)) {
-			setSelection(gridPointer.current);
-		} else if(input.isButtonOn(SELECT_BUTTON) && gridPointer.hasMoved) {
-			// Drag selected object
-			// Can only drag if there is something selected
-			bool dragStuff = !(selectedObject is null);
-			// And only when the mouse has moved from a grid block to another
-			dragStuff &= gridPointer.hasMoved;
-			// And only if that block is not the currently selected block
-			dragStuff &= selectedBlock != gridPointer.current;
-			
-			// Try to start grabbing mode by grabbing the object
-			if(dragStuff && !draggingMode) {
-				if(selectedObject.grab(selectedBlock)) {
-					draggingMode = true;
-				} else {
-					// Didn't grab, won't drag
-					dragStuff = false;
-				}
-			}
-			
-			// Finally drag something around
-			if(dragStuff) {
-				immutable auto fromBlock = selectedBlock;
-				immutable auto toBlock = gridPointer.current;
-				Point offset;
-				selectedObject.drag(fromBlock, toBlock, offset);
-				// Move selection
-				selectedBlock += offset;
-			}
-			
-			// Set selection to pointer if not dragging
-			if(draggingMode == false) {
-				setSelection(gridPointer.current);
-			}
-		} else if(input.wasButtonTurnedOff(SELECT_BUTTON)) {
-			if(selectedObject)
-				selectedObject.drop(selectedBlock);
-			
-			draggingMode = false;
-		}
-	}
-	
-	void checkWallTool(in InputState input, in float delta) {
-		if(input.wasButtonTurnedOn(SELECT_BUTTON)) {
-			// Update selection
-			setSelection(gridPointer.current);
-			
-			// Start constructing a new wall
-			wallInConstruction = new Wall();
-			wallInConstruction.glueBlock(gridPointer.current);
-			
-			// Propagate whether the wall is fixed from the
-			// current selected object (which is under the cursor)
-			if(selectedObject) {
-				auto wallEditable = wallInConstruction.getEditable(context);
-				if(selectedObject.canBeFixed && wallEditable.canBeFixed) {
-					wallEditable.setFixed(selectedObject.isFixed);
-				}
-			}
-			
-			stageRenderer.updateConstructionCache();
-		} else if(input.isButtonOn(SELECT_BUTTON)) {
-			// Add blocks to the wall
-			if(wallInConstruction && gridPointer.hasMoved) {
-				import std.algorithm;
-				
-				if(!wallInConstruction)
-					return;
-				
-				// Reset new wall blocks
-				wallInConstruction.destroyBlocks();
-				
-				// Create wall blocks in shape of a rectangle from
-				// the start of the drag until the current point
-				int left = min(gridDragStart.x, gridLastDraggedBlock.x);
-				int top = min(gridDragStart.y, gridLastDraggedBlock.y);
-				int right = max(gridDragStart.x, gridLastDraggedBlock.x);
-				int bottom = max(gridDragStart.y, gridLastDraggedBlock.y);
-				
-				foreach(int x; left..right + 1) {
-					foreach(int y; top..bottom + 1) {
-						wallInConstruction.glueBlock(Point(x, y));
-					}
-				}
-				
-				stageRenderer.updateConstructionCache();
-			}
-		} else if(input.wasButtonTurnedOff(SELECT_BUTTON)) {
-			if(!wallInConstruction)
-				return;
-			
-			// Finish constructing wall
-			context.stage.walls ~= wallInConstruction;
-			
-			// Tell the wall to merge with overlapping walls
-			wallInConstruction.getEditable(context).mergeOverlapping();
-			
-			// Select new wall
-			auto wallBlocks = wallInConstruction.getBlocks();
-			auto wallBlockOffset = wallInConstruction.getBlockOffset();
-			// Update selected block only if it's not already at the new wall
-			import std.algorithm : canFind;
-			if(!canFind(wallBlocks, selectedBlock - wallBlockOffset)) {
-				selectedBlock = gridLastDraggedBlock;
-			}
-			selectedObject = wallInConstruction.getEditable(context);
-			wallInConstruction = null;
-			
-			// Update wall cache
-			stageRenderer.updateCachedWalls();
-			stageRenderer.updateConstructionCache();
-		}
-	}
-	
 	/++
 	 + Sets selectedBlock and selectedObject to a given point
 	 +/
@@ -518,52 +330,24 @@ class EditorScreen : GameScreen {
 	}
 	
 	/++
-	 + Removes the currently selected object.
-	 + Returns whether it was removed.
-	 +/
-	bool trashSelection() {
-		if(selectedObject && trash(selectedObject)) {
-			selectedObject = null;
-			return true;
-		} else {
-			return false;
-		}
-	}
-	
-	/++
-	 + Glue the selected object
-	 + Returns whether that was possible.
-	 +/
-	 bool glueSelection() {
-		if(selectedObject && selectedObject.canBeFixed) {
-			selectedObject.setFixed(!selectedObject.isFixed());
-			return true;
-		} else {
-			return false;
-		}
-	}
-	
-	/++
-	 + Erases the selected block
-	 + Returns whether that was possible.
-	 +/
-	 bool eraseSelection() {
-		if(selectedObject) {
-			bool destroyed;
-			if(selectedObject.eraseBlock(selectedBlock, destroyed)) {
-				selectedObject = null;
-				return true;
-			}
-		}
-		return false;
-	}
-	
-	/++
 	 + Removes an object from the stage.
 	 + Returns whether it was removed.
 	 +/
 	bool trash(EditableStageObject trashedObject) {
-		return trashedObject.deleteFromStage();
+		// Check whether the trashed object is also the selected object
+		bool removingSelection = true;
+		if(selectedObject) {
+			if(selectedObject.getOwner() == trashedObject.getOwner())
+				removingSelection = true;
+		}
+		
+		auto trashed = trashedObject.deleteFromStage();
+		
+		// Clear selection if the selection was deleted
+		if(removingSelection && trashed)
+			selectedObject = null;
+			
+		return trashed;
 	}
 	
 	void refreshSubtitle() {
