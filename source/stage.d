@@ -204,7 +204,7 @@ class Stage {
 	}
 	
 	/++
-	 + Saves this stage and its metadata to disk
+	 + Saves this stage to disk
 	 +/
 	void saveToDisk(in string filepath) {
 		import std.file;
@@ -215,15 +215,6 @@ class Stage {
 		JSONValue[string] rootObjects;
 		
 		rootObjects["stage"] = this.serialize();
-		
-		// Serialize metadata
-		if(this.metadata) {
-			JSONValue[string] serializedMetadata;
-			serializedMetadata["title"] = this.metadata.title;
-			
-			rootObjects["metadata"] = serializedMetadata;
-		}
-		
 		auto root = JSONValue(rootObjects);
 		
 		// Write everything to disk
@@ -232,28 +223,19 @@ class Stage {
 	}
 	
 	/++
-	 + Loads a stage and its metadata from disk
+	 + Loads a stage from disk
 	 +/
-	static void LoadStage(
-		in string filename, out Stage stage, out StageInfo metadata
-	) {
+	static Stage FromDisk(in string filename) {
 		import std.file;
 		auto json = parseJSON(readText(filename));
 		JSONValue[string] root;
 		
 		if(getJsonValue(json, root)) {
-			// Load metadata
-			JSONValue[string] serializedMetadata;
-			if(root.getJsonValue("metadata", serializedMetadata)) {
-				metadata = new StageInfo();
-				serializedMetadata.getJsonValue("title", metadata.title);
-			}
-			
 			JSONValue* stageRoot = "stage" in root;
 			if(stageRoot is null) {
 				throw new Exception("Could not load stage object.");
 			} else {
-				stage = Construct(*stageRoot);
+				return Construct(*stageRoot);
 			}
 		} else {
 			throw new Exception("File is not a valid JSON object.");

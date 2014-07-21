@@ -199,8 +199,9 @@ class MazeEditorScreen : GameScreen {
 		StageInfo newMetadata;
 		Stage newStage;
 		
-		Stage.LoadStage(filename, newStage, newMetadata);
+		newStage = Stage.FromDisk(filename);
 		
+		// TODO: Add a way to load metadata
 		if(newMetadata is null) {
 			newMetadata = new StageInfo();
 			newMetadata.title = FALLBACK_STAGE_TITLE;

@@ -28,7 +28,7 @@ class MenuScreen : GameScreen {
 		
 		menuContext = new MenuContext(game.assets);
 		
-		availableCourses = loadCourses(MAZES_DIRECTORY);
+		availableCourses = Course.SearchDirectory(MAZES_DIRECTORY);
 		auto courseTitles = new string[availableCourses.length];
 		foreach(int i, Course aCourse; availableCourses) {
 			courseTitles[i] = aCourse.info.title;

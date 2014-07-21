@@ -32,10 +32,11 @@ void main(string[] args) {
 	auto goToMenu = { mazeGame.nextScreen = new MenuScreen(mazeGame); };
 	if(args.length > 1) {
 		import coursecontext;
-		import course : loadCourse;
-		Game realGame = mazeGame;
-		auto course = loadCourse(args[1]);
-		auto context = new CourseContext(realGame , course);
+		import course;
+		
+		auto courseFilename = args[1];
+		auto loadedCourse = Course.FromDisk(courseFilename);
+		auto context = new CourseContext(mazeGame, loadedCourse);
 		
 		context.startPlaying();
 		
