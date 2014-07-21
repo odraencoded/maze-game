@@ -15,13 +15,16 @@ enum BACKGROUND_COLOR = Color(32, 32, 32, 255);
 enum DEFAULT_SCALING_MODE = ScalingMode.PixelPerfect;
 
 void main(string[] args) {
+	// Create game
 	auto mazeGame = new Game(GAME_TITLE, GAME_WIDTH, GAME_HEIGHT);
 	
-	// Open Window
-	auto window = mazeGame.window = setupWindow();
+	// Setup window
+	mazeGame.goWindowed();
+	mazeGame.window.setFramerateLimit(GAME_FRAMERATE);
 	mazeGame.resizer.scalingMode = DEFAULT_SCALING_MODE;
 	mazeGame.resizer.checkSize();
 	
+	// Load assets
 	loadAssets(mazeGame);
 	
 	// Setup input
@@ -62,7 +65,7 @@ void main(string[] args) {
 		
 		import dsfml.window: Event, Keyboard, Mouse;
 		Event event;
-		while(window.pollEvent(event)) {
+		while(mazeGame.window.pollEvent(event)) {
 			switch(event.type) {
 				// Close window
 				case(Event.EventType.Closed):
@@ -114,14 +117,14 @@ void main(string[] args) {
 		
 		input.finishCycle();
 		
-		if(input.close)
-			window.close();
-		
 		// Logic part of the logic/draw cycle
 		mazeGame.currentScreen.cycle(input, frameDelta);
 		
+		if(input.close)
+			mazeGame.window.close();
+		
 		// Exiting loop
-		mazeGame.isRunning = mazeGame.isRunning && window.isOpen();
+		mazeGame.isRunning = mazeGame.isRunning && mazeGame.window.isOpen();
 		if(!mazeGame.isRunning)
 			break;
 		
@@ -139,8 +142,8 @@ void main(string[] args) {
 		buffer.display();
 		
 		// Not even bothering clearing the window since buffer should cover it
-		window.draw(mazeGame.resizer);
-		window.display();
+		mazeGame.window.draw(mazeGame.resizer);
+		mazeGame.window.display();
 		
 		// Changing screens
 		SwitchScreens(mazeGame, input);
@@ -149,15 +152,6 @@ void main(string[] args) {
 		import core.memory : GC;
 		GC.collect();
 	}
-}
-
-private auto setupWindow() {
-	import dsfml.graphics : VideoMode, RenderWindow;
-	
-	auto videoMode = VideoMode(GAME_WIDTH, GAME_HEIGHT);
-	auto window = new RenderWindow(videoMode, GAME_TITLE);
-	window.setFramerateLimit(GAME_FRAMERATE);
-	return window;
 }
 
 private auto setupInput() {

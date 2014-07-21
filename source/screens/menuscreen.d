@@ -124,7 +124,7 @@ class MenuScreen : GameScreen {
 		auto optionsMenu = new Menu();
 		
 		// Add a scaling mode menu item
-		auto scalingText = menuContext.createText("Scaling Mode");
+		auto scalingText = menuContext.createText();
 		auto scalingMenuItem = new ChoiceMenuItem!ScalingMode(
 			scalingText, "Scaling Mode: "
 		);
@@ -140,9 +140,28 @@ class MenuScreen : GameScreen {
 		};
 		optionsMenu.items ~= scalingMenuItem;
 		
+		// Add a fullscreen mode menu item
+		auto fullscreenText = menuContext.createText();
+		auto fullscreenMenuItem = new ChoiceMenuItem!bool(fullscreenText);
+		
+		alias FullscreenChoice = fullscreenMenuItem.Choice;
+		fullscreenMenuItem.choices = [
+			FullscreenChoice("Windowed", false),
+			FullscreenChoice("Fullscreen", true),
+		];
+		fullscreenMenuItem.selectedChoice = this.game.isFullscreen;
+		fullscreenMenuItem.onChoose ~= {
+			if(fullscreenMenuItem.selectedChoice) {
+				this.game.goFullscreen();
+			} else {
+				this.game.goWindowed();
+			}
+		};
+		optionsMenu.items ~= fullscreenMenuItem;
+		
 		// Add "go back" item
 		auto goBackMenuItem = menuContext.createMenuItem("Return to main menu");
-		optionsMenu.items ~= goBackMenuItem;
+		optionsMenu.items ~= [null, goBackMenuItem];
 		
 		// Pressing esc on course menu or activating "go back"
 		auto goBackToMainMenu = {

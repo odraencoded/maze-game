@@ -311,7 +311,7 @@ class ChoiceMenuItem(T) : MenuItem {
 		}
 	}
 	
-	this(Text text, dstring prefix) {
+	this(Text text, dstring prefix = "") {
 		this.text = text;
 		this.prefix = prefix;
 		refreshText();
