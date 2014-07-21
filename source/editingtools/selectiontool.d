@@ -17,9 +17,9 @@ class SelectionTool : EditingTool {
 		auto gridPointer = editor.gridPointer;
 		auto selectedBlock = editor.selectedBlock;
 		
-		if(input.wasButtonTurnedOn(SELECT_BUTTON)) {
+		if(input[SELECT_BUTTON].wasTurnedOn) {
 			editor.setSelection(gridPointer.current);
-		} else if(input.isButtonOn(SELECT_BUTTON) && gridPointer.hasMoved) {
+		} else if(input[SELECT_BUTTON].isOn && gridPointer.hasMoved) {
 			// Drag selected object
 			// Can only drag if there is something selected
 			bool dragStuff = !(editor.selectedObject is null);
@@ -52,7 +52,7 @@ class SelectionTool : EditingTool {
 			if(editor.draggingMode == false) {
 				editor.setSelection(gridPointer.current);
 			}
-		} else if(input.wasButtonTurnedOff(SELECT_BUTTON)) {
+		} else if(input[SELECT_BUTTON].wasTurnedOn) {
 			if(editor.selectedObject)
 				editor.selectedObject.drop(selectedBlock);
 			

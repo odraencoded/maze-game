@@ -1,9 +1,11 @@
+debug import std.stdio;
 import std.path : slash = dirSeparator;
 
 import dsfml.graphics.color : Color;
 import scaling : ScalingMode;
 
 import game;
+import input;
 
 enum GAME_WIDTH = 320;
 enum GAME_HEIGHT = 180;
@@ -14,17 +16,25 @@ enum BACKGROUND_COLOR = Color(32, 32, 32, 255);
 enum DEFAULT_SCALING_MODE = ScalingMode.PixelPerfect;
 
 void main(string[] args) {
+	// Create game
 	auto mazeGame = new Game(GAME_TITLE, GAME_WIDTH, GAME_HEIGHT);
 	
-	// Open Window
-	auto window = mazeGame.window = setupWindow();
-	mazeGame.resizer.scalingMode = DEFAULT_SCALING_MODE;
+	// Setup window
+	try {
+		mazeGame.loadSettings(GAME_SETTINGS_FILENAME);
+	} catch {
+		debug writeln("Failed to load game settings. Loading defaults.");
+		mazeGame.loadDefaultSettings();
+	}
+	
+	mazeGame.window.setFramerateLimit(GAME_FRAMERATE);
 	mazeGame.resizer.checkSize();
 	
+	// Load assets
 	loadAssets(mazeGame);
 	
 	// Setup input
-	auto input = setupInput();
+	auto input = new InputState(mazeGame.bindings);
 	
 	// Setup screen
 	// If a directory is passed in the arguments we load it directly
@@ -47,9 +57,8 @@ void main(string[] args) {
 		goToMenu();
 	}
 	
-	// Switch screens
-	mazeGame.currentScreen = mazeGame.nextScreen;
-	mazeGame.nextScreen = null;
+	// First switch screens
+	SwitchScreens(mazeGame, input);
 	
 	// Main loop
 	mazeGame.isRunning = true;
@@ -62,7 +71,7 @@ void main(string[] args) {
 		
 		import dsfml.window: Event, Keyboard, Mouse;
 		Event event;
-		while(window.pollEvent(event)) {
+		while(mazeGame.window.pollEvent(event)) {
 			switch(event.type) {
 				// Close window
 				case(Event.EventType.Closed):
@@ -114,14 +123,14 @@ void main(string[] args) {
 		
 		input.finishCycle();
 		
-		if(input.close)
-			window.close();
-		
 		// Logic part of the logic/draw cycle
 		mazeGame.currentScreen.cycle(input, frameDelta);
 		
+		if(input.close)
+			mazeGame.window.close();
+		
 		// Exiting loop
-		mazeGame.isRunning = mazeGame.isRunning && window.isOpen();
+		mazeGame.isRunning = mazeGame.isRunning && mazeGame.window.isOpen();
 		if(!mazeGame.isRunning)
 			break;
 		
@@ -139,63 +148,41 @@ void main(string[] args) {
 		buffer.display();
 		
 		// Not even bothering clearing the window since buffer should cover it
-		window.draw(mazeGame.resizer);
-		window.display();
+		mazeGame.window.draw(mazeGame.resizer);
+		mazeGame.window.display();
 		
 		// Changing screens
-		if(mazeGame.nextScreen) {
-			mazeGame.currentScreen.disappear();
-			
-			// In case .disappear() forces the screen to remain the same
-			if(mazeGame.nextScreen != mazeGame.currentScreen) {
-				import gamescreen : GameScreen;
-				GameScreen nextScreen;
-				do {
-					nextScreen = mazeGame.nextScreen;
-					nextScreen.appear();
-				} while(nextScreen != mazeGame.nextScreen);
-				
-				mazeGame.currentScreen = mazeGame.nextScreen;
-				mazeGame.nextScreen = null;
-				
-				// Reset input so that it's not carried on to the next screen
-				input.reset();
-			}
-		}
+		SwitchScreens(mazeGame, input);
 		
 		// Cleaning up the trash
 		import core.memory : GC;
 		GC.collect();
 	}
+	
+	mazeGame.saveSettings(GAME_SETTINGS_FILENAME);
 }
 
-private auto setupWindow() {
-	import dsfml.graphics : VideoMode, RenderWindow;
-	
-	auto videoMode = VideoMode(GAME_WIDTH, GAME_HEIGHT);
-	auto window = new RenderWindow(videoMode, GAME_TITLE);
-	window.setFramerateLimit(GAME_FRAMERATE);
-	return window;
-}
-
-private auto setupInput() {
-	import input;
-	import dsfml.window : Keyboard;
-	
-	auto result = new InputState();
-	
-	// TODO: Replace this by something that loads bindings from a file.
-	result.bind(Keyboard.Key.I, Command.GoUp         );
-	result.bind(Keyboard.Key.L, Command.GoRight      );
-	result.bind(Keyboard.Key.K, Command.GoDown       );
-	result.bind(Keyboard.Key.J, Command.GoLeft       );
-	result.bind(Keyboard.Key.Q, Command.CyclePrevious);
-	result.bind(Keyboard.Key.E, Command.CycleNext    );
-	result.bind(Keyboard.Key.D, Command.Grab         );
-	result.bind(Keyboard.Key.W, Command.Camera       );
-	result.bind(Keyboard.Key.R, Command.Restart      );
-	
-	return result;
+private void SwitchScreens(Game mazeGame, InputState input) {
+	if(mazeGame.nextScreen) {
+		if(mazeGame.currentScreen)
+			mazeGame.currentScreen.disappear();
+		
+		// In case .disappear() forces the screen to remain the same
+		if(mazeGame.nextScreen != mazeGame.currentScreen) {
+			import gamescreen : GameScreen;
+			GameScreen nextScreen;
+			do {
+				nextScreen = mazeGame.nextScreen;
+				nextScreen.appear();
+			} while(nextScreen != mazeGame.nextScreen);
+			
+			mazeGame.currentScreen = mazeGame.nextScreen;
+			mazeGame.nextScreen = null;
+			
+			// Reset input so that it's not carried on to the next screen
+			input.reset();
+		}
+	}
 }
 
 private void loadAssets(Game mazeGame) {

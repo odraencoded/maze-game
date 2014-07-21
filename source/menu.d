@@ -136,8 +136,8 @@ class MenuContext : Drawable {
 		
 		// Whether the menu item has been activated
 		bool activate;
-		activate = input.wasKeyTurnedOn(SystemKey.Return);
-		activate |= input.wasTurnedOn(Command.Grab);
+		activate = input[SystemKey.Return].wasTurnedOn;
+		activate |= input[Command.Grab].wasTurnedOn;
 		
 		if(activate) {
 			auto selectedItem = currentMenu.items[selection];
@@ -146,7 +146,7 @@ class MenuContext : Drawable {
 		
 		// Checking whether the player cancelled the action
 		bool cancel;
-		cancel = input.wasKeyTurnedOn(SystemKey.Escape);
+		cancel = input[SystemKey.Escape].wasTurnedOn;
 		if(cancel) {
 			currentMenu.onCancel(currentMenu);
 		}
@@ -262,4 +262,181 @@ class TextEntryMenuItem : MenuItem {
 		caredAnimation = 0;
 		refreshText();
 	}
+}
+
+/++
+ + A menu item that cycles through multiple options.
+ +/
+class ChoiceMenuItem(T) : MenuItem {
+	Signal!(ChoiceMenuItem) onChoose;
+	
+	dstring prefix;
+	
+	struct Choice {
+		dstring text;
+		T value;
+	}
+	
+	Choice[] choices;
+	
+	/++
+	 + The index of the current selected choice.
+	 + Returns -1 if selection is invalid.
+	 +/
+	@property {
+		int selectedIndex() {
+			return _selectedIndex;
+		}
+		
+		void selectedIndex(int newIndex) {
+			_selectedIndex = newIndex;
+			refreshText();
+			onChoose(this);
+		}
+	}
+	
+	/++
+	 + Getter and setter for the selected value.
+	 + Sets selectedIndex to -1 if input is not amongst valid choices.
+	 +/
+	@property {
+		T selectedChoice(){
+			return choices[selectedIndex].value;
+		}
+	
+		void selectedChoice(T newChoice) {
+			import std.algorithm;
+			
+			selectedIndex = countUntil!"a.value == b"(choices, newChoice);
+		}
+	}
+	
+	this(Text text, dstring prefix = "") {
+		this.text = text;
+		this.prefix = prefix;
+		refreshText();
+		
+		onActivate ~= &cycleThroughChoices;
+	}
+	
+	void refreshText() {
+		// Refresh text graphic
+		if(selectedIndex >= 0) {
+			auto choiceText = choices[selectedIndex % $].text;
+			text.setString(this.prefix ~ choiceText);
+		} else {
+			text.setString(this.prefix ~ "?");
+		}
+	}
+	
+	/++
+	 + Switch to the next choice.
+	 +/
+	void cycleThroughChoices() {
+		if(choices.length > 0) {
+			_selectedIndex = (_selectedIndex + 1) % choices.length;
+		} else {
+			_selectedIndex = -1;
+		}
+		
+		onChoose(this);
+		refreshText();
+	}
+	
+private:
+	int _selectedIndex = -1;
+}
+
+/++
+ + A menu item binds keys
+ +/
+class KeyBindingMenuItem : MenuItem {
+	import input;
+	
+	MenuContext context;
+	InputBinder bindings;
+	Command command;
+	dstring prefix;
+	
+	enum CARET_FLASHING_RATE = .8f;
+	float caredAnimation = 0;
+	
+	bool instantSwitchBackGuard;
+	
+	this(
+		Text text, MenuContext context, InputBinder bindings,
+		Command command, dstring prefix = ""
+	) {
+		this.text = text;
+		this.context = context;
+		this.bindings = bindings;
+		this.command = command;
+		this.prefix = prefix;
+		
+		refreshText();
+		
+		onActivate ~= &beginKeyBinding;
+	}
+	
+	override void cycle(in InputState input, in float delta) {
+		if(!_keyBindingMode)
+			return;
+		
+		// Update caret animation
+		caredAnimation = (caredAnimation + delta) % CARET_FLASHING_RATE;
+		
+		// Bind a pressed key and unlock the menu context
+		auto pressedKeys = input.getPressedKeys(true);
+		if(pressedKeys.length > 0 && !instantSwitchBackGuard) {
+			import std.algorithm;
+			
+			auto newKey = pressedKeys[0];
+			if(!canFind(bindings.forbiddenKeys, newKey)) {
+				bindings.keys[command] = newKey;
+			}
+			
+			context.lockSelector = false;
+			_keyBindingMode = false;
+		}
+		refreshText();
+		
+		instantSwitchBackGuard = false;
+	}
+	
+	void refreshText() {
+		// Refresh text graphic
+		if(_keyBindingMode) {
+			// Refresh text graphic
+			if(caredAnimation > CARET_FLASHING_RATE / 2)
+				text.setString(this.prefix ~ "_");
+			else
+				text.setString(this.prefix);
+			
+		} else {
+			dstring keyName;
+			Keyboard.Key boundKey;
+			
+			if(bindings.keys.tryGet(command, boundKey)) {
+				keyName = GetKeyName(boundKey);
+			} else {
+				keyName = "None";
+			}
+			
+			text.setString(this.prefix ~ keyName);
+		}
+	}
+	
+	/++
+	 + Switch to the next choice.
+	 +/
+	void beginKeyBinding() {
+		context.lockSelector = true;
+		_keyBindingMode = true;
+		instantSwitchBackGuard = true;
+		
+		refreshText();
+	}
+	
+private:
+	private bool _keyBindingMode;
 }

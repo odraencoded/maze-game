@@ -3,22 +3,24 @@ import std.algorithm;
 import dsfml.window.keyboard;
 import dsfml.window.mouse;
 
+import inputbinder;
 import commands;
 import geometry;
 import utility;
+
+public import onoffstate;
 
 /++
  + A class to keep track of the user input
  +/
 class InputState {
-	Command[Keyboard.Key] keyBindings;
-	Command[Mouse.Button] buttonBindings;
+	InputBinder bindings;
 	MovingPoint pointer;
 	bool close, lostFocus;
 	dstring newText;
 	
-	this() {
-		_command_input = new OnOffState[Command.max + 1];
+	this(InputBinder bindings) {
+		this.bindings = bindings;
 		
 		_directional_input[OnOffState.Off      ] = Side.None;
 		_directional_input[OnOffState.On       ] = Side.None;
@@ -30,7 +32,10 @@ class InputState {
 	 + Make the input state good as new.
 	 +/
 	void reset() pure @safe {
-		foreach(ref OnOffState state; _command_input)
+		foreach(ref OnOffState state; _keyStates)
+			state = OnOffState.Off;
+		
+		foreach(ref OnOffState state; _buttonStates)
 			state = OnOffState.Off;
 		
 		foreach(ref Side state; _directional_input)
@@ -38,7 +43,7 @@ class InputState {
 	}
 	
 	// Indexing for getting the state of stuff because it is neat.
-	OnOffState opIndex(in Command command) const pure @safe {
+	OnOffState opIndex(in Command command) const pure {
 		return getCommand(command);
 	}
 	OnOffState opIndex(in Keyboard.Key key) const {
@@ -51,59 +56,40 @@ class InputState {
 	/++
 	 + Gets the state of a command
 	 +/
-	OnOffState getCommand(in Command command) pure const @safe {
-		return _command_input[command];
+	OnOffState getCommand(in Command command) const pure {
+		OnOffState state;
+		
+		// Get key state
+		Keyboard.Key boundKey;
+		if(bindings.keys.tryGet(command, boundKey)) {
+			state = getKey(boundKey);
+			if(state != OnOffState.Off)
+				return state;
+		}
+		
+		// If key state is off, return button state
+		Mouse.Button boundButton;
+		if(bindings.buttons.tryGet(command, boundButton)) {
+			state |= getButton(boundButton);
+			return state;
+		}
+		
+		// If there is no mouse binding(or key binding) return off.
+		return OnOffState.Off;
 	}
 	
 	/++
 	 + Gets the state of a keyboard key.
 	 +/
-	OnOffState getKey(in Keyboard.Key key) const {
-		if(Keyboard.isKeyPressed(key)) {
-			if(canFind(_changed_key_input, key)) return OnOffState.TurnedOn;
-			else return OnOffState.On;
-		} else {
-			if(canFind(_changed_key_input, key)) return OnOffState.TurnedOff;
-			else return OnOffState.Off;
-		}
+	OnOffState getKey(in Keyboard.Key key) const pure {
+		return _keyStates.get(key, OnOffState.Off);
 	}
 	
 	/++
 	 + Gets the state of a mouse button
 	 +/
-	OnOffState getButton(in Mouse.Button button) const  {
-		if(Mouse.isButtonPressed(button)) {
-			if(canFind(_changed_button_input, button))
-				return OnOffState.TurnedOn;
-			else return OnOffState.On;
-		} else {
-			if(canFind(_changed_button_input, button))
-				return OnOffState.TurnedOff;
-			else return OnOffState.Off;
-		}
-	}
-	
-	/++
-	 + Whether a given command is turned on.
-	 +/
-	bool isOn(in Command command) const pure @safe {
-		return _command_input[command].hasFlag(OnOffState.On);
-	}
-	
-	/++
-	 + Whether a given command has been turned on this cycle,
-	 + e.g. it was off in the previous cycle.
-	 +/
-	bool wasTurnedOn(in Command command) const pure @safe {
-		return _command_input[command].hasFlag(OnOffState.TurnedOn);
-	}
-	
-	/++
-	 + Whether a given command has been turned off this cycle,
-	 + e.g. it was on in the previous cycle.
-	 +/
-	bool wasTurnedOff(in Command command) const pure @safe {
-		return _command_input[command].hasFlag(OnOffState.TurnedOff);
+	OnOffState getButton(in Mouse.Button button) const pure {
+		return _buttonStates.get(button, OnOffState.Off);
 	}
 	
 	/++
@@ -118,36 +104,6 @@ class InputState {
 	 +/
 	Point getOffset(in OnOffState state) const pure @safe {
 		return _directional_input[state].getOffset();
-	}
-	
-	/++
-	 + Same stuff as above but with keys.
-	 +/
-	bool isKeyOn(in Keyboard.Key key) const {
-		return getKey(key).hasFlag(OnOffState.On);
-	}
-	
-	bool wasKeyTurnedOn(in Keyboard.Key key) const {
-		return getKey(key).hasFlag(OnOffState.TurnedOn);
-	}
-	
-	bool wasKeyTurnedOff(in Keyboard.Key key) const {
-		return getKey(key).hasFlag(OnOffState.TurnedOff);
-	}
-	
-	/++
-	 + Same stuff as above but with buttons.
-	 +/
-	bool isButtonOn(in Mouse.Button button) const {
-		return getButton(button).hasFlag(OnOffState.On);
-	}
-	
-	bool wasButtonTurnedOn(in Mouse.Button button) const {
-		return getButton(button).hasFlag(OnOffState.TurnedOn);
-	}
-	
-	bool wasButtonTurnedOff(in Mouse.Button button) const {
-		return getButton(button).hasFlag(OnOffState.TurnedOff);
 	}
 	
 	Side getSystemSides(in OnOffState state) const {
@@ -168,20 +124,30 @@ class InputState {
 	 + Returns  1 if CycleNext are state.
 	 + Returns  0 if either or both are state.
 	 +/
-	int getRotation(in OnOffState state) const pure @safe {
+	int getRotation(in OnOffState state) const pure {
 		int result;
-		if(_command_input[Command.CyclePrevious].hasFlag(state))
+		if(getCommand(Command.CyclePrevious).hasFlag(state))
 			result--;
-		if(_command_input[Command.CycleNext].hasFlag(state))
+		if(getCommand(Command.CycleNext).hasFlag(state))
 			result++;
 		return result;
 	}
 	
 	/++
-	 + Binds a keyboard key to a given command.
+	 + Gets which keys have been pressed this cycle.
 	 +/
-	void bind(in Keyboard.Key key, in Command value) pure nothrow @safe {
-		keyBindings[key] = value;
+	Keyboard.Key[] getPressedKeys(bool thisCycle) const pure @safe {
+		Keyboard.Key[] pressedKeys;
+		
+		foreach(Keyboard.Key key, OnOffState state; _keyStates) {
+			if(thisCycle) {
+				if(state.wasTurnedOn)
+					pressedKeys ~= key;
+			} else if(state.isOn)
+				pressedKeys ~= key;
+		}
+		
+		return pressedKeys;
 	}
 	
 	/++
@@ -189,14 +155,15 @@ class InputState {
 	 +/
 	void prepareCycle() pure @safe {
 		// Removing changed flag from input
-		foreach(ref OnOffState value; _command_input)
-			value &= ~OnOffState.Changed;
+		foreach(ref OnOffState aKeyState; _keyStates) {
+			aKeyState &= ~OnOffState.Changed;
+		}
+		
+		foreach(ref OnOffState aButtonState; _buttonStates) {
+			aButtonState &= ~OnOffState.Changed;
+		}
 		
 		close = lostFocus = false;
-		
-		// Clear changed key/button
-		_changed_key_input.length = 0;
-		_changed_button_input.length = 0;
 		
 		// Clear text input
 		newText = "";
@@ -209,17 +176,14 @@ class InputState {
 	void turnKey(in Keyboard.Key key, OnOffState state) pure @safe
 	in { assert(state == OnOffState.On || state == OnOffState.Off); }
 	body {
-		// Update _command_input if the key is bound to something
-		Command* value = key in keyBindings;
+		// Update _keyStates
+		auto value = key in _keyStates;
 		if(value) {
-			auto commandValue = &_command_input[*value];
-			// The command must not be <state> already
-			if(!hasFlag(*commandValue, state))
-				*commandValue = OnOffState.Changed | state;
+			if(!hasFlag(*value, state))
+				*value = OnOffState.Changed | state;
+		} else {
+			_keyStates[key] = OnOffState.Changed | state;
 		}
-		
-		// Set the key as changed
-		_changed_key_input ~= key;
 	}
 	
 	/++
@@ -242,17 +206,14 @@ class InputState {
 	void turnButton(in Mouse.Button button, OnOffState state) pure @safe
 	in { assert(state == OnOffState.On || state == OnOffState.Off); }
 	body {
-		// Update _command_input if the button is bound to something
-		Command* value = button in buttonBindings;
+		// Update _buttonStates
+		auto value = button in _buttonStates;
 		if(value) {
-			auto commandValue = &_command_input[*value];
-			// The command must not be <state> already
-			if(!hasFlag(*commandValue, state))
-				*commandValue = OnOffState.Changed | state;
+			if(!hasFlag(*value, state))
+				*value = OnOffState.Changed | state;
+		} else {
+			_buttonStates[button] = OnOffState.Changed | state;
 		}
-		
-		// Set the key as changed
-		_changed_button_input ~= button;
 	}
 	
 	/++
@@ -272,23 +233,21 @@ class InputState {
 	/++
 	 + Fills remaining input data from the input received during this cycle.
 	 +/
-	void finishCycle() pure @safe {
+	void finishCycle() pure {
 		// Updating directional input
 		foreach(OnOffState keyFlag, ref Side sideInput; _directional_input) {
 			sideInput = Side.None;
-			foreach(int sideCommand, Side sideValue; DIRECTIONAL_COMMANDS) {
-				if(_command_input[sideCommand].hasFlag(keyFlag))
+			foreach(Command sideCommand, Side sideValue; DIRECTIONAL_COMMANDS) {
+				if(getCommand(sideCommand).hasFlag(keyFlag))
 					sideInput |= sideValue;
 			}
 		}
 	}
 	
 	private {
-		OnOffState[] _command_input;
-		Side[OnOffState] _directional_input;
+		OnOffState[Keyboard.Key] _keyStates;
+		OnOffState[Mouse.Button] _buttonStates;
 		
-		// What keyboard keys and mouse buttons changed in a cycle
-		Keyboard.Key[] _changed_key_input;
-		Mouse.Button[] _changed_button_input;
+		Side[OnOffState] _directional_input;
 	}
 }

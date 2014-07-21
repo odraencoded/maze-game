@@ -13,7 +13,7 @@ class CreationTool : EditingTool {
 	}
 	
 	override void cycleActive(in InputState input, in float delta) {
-		if(input.wasButtonTurnedOn(SELECT_BUTTON)) {
+		if(input[SELECT_BUTTON].wasTurnedOn) {
 			editor.selectedBlock = editor.gridPointer.current;
 			auto newObject = createObject(input, delta);
 			

@@ -18,13 +18,14 @@ T[] getFlags(T)(in T value) pure nothrow {
 }
 
 /++
- + Represents whether something is on or off.
+ + Tries to get a value from key in an array.
+ + Returns false if the key is not in the array.
  +/
-enum OnOffState {
-	Off = 1,
-	On = 2,
-	Changed = 4,
+bool tryGet(K, V)(in V[K] array, in K key, ref V result) pure nothrow @safe {
+	auto pointer = key in array;
+	if(pointer is null)
+		return false;
 	
-	TurnedOff = Changed | Off,
-	TurnedOn = Changed | On
+	result = *pointer;
+	return true;
 }

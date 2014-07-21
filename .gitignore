@@ -1,2 +1,4 @@
 .dub/*
 debug/*
+editor/*
+maze-settings.yaml
