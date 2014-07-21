@@ -404,8 +404,14 @@ class EditorSettingsScreen : GameScreen {
 	EditorScreen editorScreen;
 	Menu mainMenu;
 	
+	enum CURTAIN_COLOR = Color(0, 0, 0, 160);
+	Backdrop curtain;
+	
 	this(Game game, EditorScreen screen) {
 		super(game);
+		
+		// Setup curtain
+		curtain = new Backdrop(CURTAIN_COLOR);
 		
 		// Create the menu
 		editorScreen = screen;
@@ -467,12 +473,6 @@ class EditorSettingsScreen : GameScreen {
 		renderTarget.view = game.view;
 		
 		// Draw curtain
-		enum CURTAIN_COLOR = Color(0, 0, 0, 160);
-		
-		auto gameSize = game.view.size;
-		auto curtain = new RectangleShape(gameSize);
-		curtain.fillColor(CURTAIN_COLOR);
-		
 		renderTarget.draw(curtain);
 		
 		// Draw menu

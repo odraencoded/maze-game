@@ -112,17 +112,23 @@ class VertexCache : Drawable {
  +/
 class Backdrop : Drawable {
 	const(Texture)* texture;
+	Color color = Color.White;
 	
 	this(in Texture* texture) {
 		this.texture = texture;
 	}
 	
-	void draw(RenderTarget target, RenderStates states) {
-		states.texture = *texture;
-		Backdrop.render(target, states);
+	this(in Color color) {
+		this.color = color;
 	}
 	
-	static void render(RenderTarget target, RenderStates states) {
+	void draw(RenderTarget target, RenderStates states) {
+		if(texture)
+			states.texture = *texture;
+		Backdrop.render(target, states, color);
+	}
+	
+	static void render(RenderTarget target, RenderStates states, Color color) {
 		// Copy paste ALL THE THINGS!!!
 		immutable auto viewSize = target.view.size;
 		immutable auto viewCenter = target.view.center;
@@ -139,8 +145,10 @@ class Backdrop : Drawable {
 		immutable auto bottomLeft  = Vector2f(left , bottom);
 		
 		immutable Vertex[] vertices = [
-			Vertex(topLeft    , topLeft    ), Vertex(topRight   , topRight   ),
-			Vertex(bottomRight, bottomRight), Vertex(bottomLeft , bottomLeft )
+			Vertex(topLeft    , color, topLeft    ),
+			Vertex(topRight   , color, topRight   ),
+			Vertex(bottomRight, color, bottomRight),
+			Vertex(bottomLeft , color, bottomLeft )
 		];
 		
 		target.draw(vertices, PrimitiveType.Quads, states);
