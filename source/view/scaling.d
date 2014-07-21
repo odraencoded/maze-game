@@ -121,4 +121,5 @@ class VideoResizer : Drawable {
 enum ScalingMode {
 	None, // Never scale
 	PixelPerfect, // Scale by integer values
+	Default = PixelPerfect
 }

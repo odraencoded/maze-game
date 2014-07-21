@@ -29,6 +29,7 @@ enum SystemKey : Keyboard.Key {
  +/
 immutable Side[Command] DIRECTIONAL_COMMANDS;
 immutable Side[SystemKey] DIRECTIONAL_KEYS;
+static immutable string[Command] BINDING_NAMES;
 
 static this() {
 	// Initialize DIRECTIONAL_COMMANDS map
@@ -41,4 +42,15 @@ static this() {
 	DIRECTIONAL_KEYS[SystemKey.Right] = Side.Right;
 	DIRECTIONAL_KEYS[SystemKey.Down ] = Side.Down;
 	DIRECTIONAL_KEYS[SystemKey.Left ] = Side.Left;
+	
+	// Initialize BINDING_NAMES map
+	BINDING_NAMES[Command.GoUp         ] = "go up";
+	BINDING_NAMES[Command.GoRight      ] = "go right";
+	BINDING_NAMES[Command.GoDown       ] = "go down";
+	BINDING_NAMES[Command.GoLeft       ] = "go left";
+	BINDING_NAMES[Command.CyclePrevious] = "cycle previous";
+	BINDING_NAMES[Command.CycleNext    ] = "cycle next";
+	BINDING_NAMES[Command.Grab         ] = "grab";
+	BINDING_NAMES[Command.Camera       ] = "camera";
+	BINDING_NAMES[Command.Restart      ] = "restart";
 }

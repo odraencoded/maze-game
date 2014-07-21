@@ -136,8 +136,8 @@ class MenuScreen : GameScreen {
 			CommandName(Command.GoLeft       , "Go Left"       ),
 			CommandName(Command.Grab         , "Grab"          ),
 			CommandName(Command.Camera       , "Camera"        ),
-			CommandName(Command.CycleNext    , "Cycle Next"    ),
 			CommandName(Command.CyclePrevious, "Cycle Previous"),
+			CommandName(Command.CycleNext    , "Cycle Next"    ),
 			CommandName(Command.Restart      , "Restart"       ),
 		];
 		
@@ -195,6 +195,7 @@ class MenuScreen : GameScreen {
 		
 		// Pressing esc on course menu or activating "go back"
 		auto goBackToMainMenu = {
+			this.game.saveSettings(GAME_SETTINGS_FILENAME);
 			menuContext.currentMenu = mainMenu;
 			menuContext.selection = 0;
 		};

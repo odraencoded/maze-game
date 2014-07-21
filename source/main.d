@@ -1,3 +1,4 @@
+debug import std.stdio;
 import std.path : slash = dirSeparator;
 
 import dsfml.graphics.color : Color;
@@ -19,16 +20,21 @@ void main(string[] args) {
 	auto mazeGame = new Game(GAME_TITLE, GAME_WIDTH, GAME_HEIGHT);
 	
 	// Setup window
-	mazeGame.goWindowed();
+	try {
+		mazeGame.loadSettings(GAME_SETTINGS_FILENAME);
+	} catch {
+		debug writeln("Failed to load game settings. Loading defaults.");
+		mazeGame.loadDefaultSettings();
+	}
+	
 	mazeGame.window.setFramerateLimit(GAME_FRAMERATE);
-	mazeGame.resizer.scalingMode = DEFAULT_SCALING_MODE;
 	mazeGame.resizer.checkSize();
 	
 	// Load assets
 	loadAssets(mazeGame);
 	
 	// Setup input
-	auto input = SetupInput(mazeGame);
+	auto input = new InputState(mazeGame.bindings);
 	
 	// Setup screen
 	// If a directory is passed in the arguments we load it directly
@@ -152,27 +158,8 @@ void main(string[] args) {
 		import core.memory : GC;
 		GC.collect();
 	}
-}
-
-private auto SetupInput(Game mazeGame) {
-	import dsfml.window : Keyboard;
 	
-	auto bindings = mazeGame.bindings;
-	bindings.forbiddenKeys ~= Keyboard.Key.Escape;
-	bindings.forbiddenKeys ~= Keyboard.Key.Return;
-	
-	// TODO: Replace this by something that loads bindings from a file.
-	bindings.keys[Command.GoUp         ] = Keyboard.Key.I;
-	bindings.keys[Command.GoRight      ] = Keyboard.Key.L;
-	bindings.keys[Command.GoDown       ] = Keyboard.Key.K;
-	bindings.keys[Command.GoLeft       ] = Keyboard.Key.J;
-	bindings.keys[Command.CyclePrevious] = Keyboard.Key.Q;
-	bindings.keys[Command.CycleNext    ] = Keyboard.Key.E;
-	bindings.keys[Command.Grab         ] = Keyboard.Key.D;
-	bindings.keys[Command.Camera       ] = Keyboard.Key.W;
-	bindings.keys[Command.Restart      ] = Keyboard.Key.R;
-	
-	return new InputState(bindings);
+	mazeGame.saveSettings(GAME_SETTINGS_FILENAME);
 }
 
 private void SwitchScreens(Game mazeGame, InputState input) {
