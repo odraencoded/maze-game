@@ -2,6 +2,7 @@ import course;
 import game;
 import mazescreen;
 import signal;
+import stage;
 
 /++
  + Moves between stages when each stage is completed.
@@ -10,7 +11,8 @@ import signal;
 class CourseContext {
 	Game game;
 	const Course course;
-	int currentStage;
+	int currentStageIndex;
+	Stage currentStageCopy;
 	
 	Signal!(CourseContext) onCourseComplete;
 	Signal!(CourseContext) onGameQuit;
@@ -22,31 +24,30 @@ class CourseContext {
 	
 	void startPlaying() {
 		// Reset progress
-		currentStage = 0;
+		currentStageIndex = 0;
 		
 		// Setup maze screen
 		auto mazeScreen = new MazeScreen(game);
 		mazeScreen.onStageComplete ~= &onStageComplete;
 		mazeScreen.onQuit ~= { onGameQuit(this); };
-		mazeScreen.onRestart ~= (MazeScreen screen) {
-			auto stage = course.buildStage(currentStage);
-			screen.setStage(stage);
+		mazeScreen.onRestart ~= {
+			mazeScreen.setStage(currentStageCopy.clone());
 		};
 		
 		// Set stage
-		auto newStage = course.buildStage(currentStage);
-		mazeScreen.setStage(newStage);
+		currentStageCopy = course.buildStage(currentStageIndex);
+		mazeScreen.setStage(currentStageCopy.clone());
 		
 		// Schedule next screen
 		game.nextScreen = mazeScreen;
 	}
 	
-	void onStageComplete(MazeScreen screen) {
+	void onStageComplete(MazeScreen mazeScreen) {
 		// Change to the next stage
-		currentStage++;
-		if(currentStage < course.length) {
-			auto stage = course.buildStage(currentStage);
-			screen.setStage(stage);
+		currentStageIndex++;
+		if(currentStageIndex < course.length) {
+			currentStageCopy = course.buildStage(currentStageIndex);
+			mazeScreen.setStage(currentStageCopy.clone());
 		} else {
 			onCourseComplete(this);
 		}
