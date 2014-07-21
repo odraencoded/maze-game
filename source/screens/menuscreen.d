@@ -38,12 +38,19 @@ class MenuScreen : GameScreen {
 			game.nextScreen = editorScreen;
 		};
 		
+		// Editor menu item
+		auto optionsMenuItem = menuContext.createMenuItem("Options");
+		optionsMenuItem.onActivate ~= &showOptionsMenu;
+		
 		// Exit menu item
-		auto exitMenuItem = menuContext.createMenuItem("Exit");
+		auto exitMenuItem = menuContext.createMenuItem("Exit Game");
 		exitMenuItem.onActivate ~= { game.isRunning = false; };
 		
 		mainMenu = new Menu();
-		mainMenu.items = [playMenuItem, editorMenuItem, null, exitMenuItem];
+		mainMenu.items = [
+			playMenuItem, editorMenuItem, optionsMenuItem,
+			null, exitMenuItem
+		];
 		
 		menuContext.currentMenu = mainMenu;
 	}
@@ -107,6 +114,47 @@ class MenuScreen : GameScreen {
 		
 		// Set menu
 		menuContext.currentMenu = courseMenu;
+		menuContext.selection = 0;
+	}
+	
+	void showOptionsMenu() {
+		import scaling;
+		
+		// Create options menu
+		auto optionsMenu = new Menu();
+		
+		// Add a scaling mode menu item
+		auto scalingText = menuContext.createText("Scaling Mode");
+		auto scalingMenuItem = new ChoiceMenuItem!ScalingMode(
+			scalingText, "Scaling Mode: "
+		);
+		
+		alias ScalingChoice = scalingMenuItem.Choice;
+		scalingMenuItem.choices = [
+			ScalingChoice("No Scaling", ScalingMode.None),
+			ScalingChoice("Pixel Perfect", ScalingMode.PixelPerfect),
+		];
+		scalingMenuItem.selectedChoice = this.game.resizer.scalingMode;
+		scalingMenuItem.onChoose ~= {
+			this.game.resizer.scalingMode = scalingMenuItem.selectedChoice;
+		};
+		optionsMenu.items ~= scalingMenuItem;
+		
+		// Add "go back" item
+		auto goBackMenuItem = menuContext.createMenuItem("Return to main menu");
+		optionsMenu.items ~= goBackMenuItem;
+		
+		// Pressing esc on course menu or activating "go back"
+		auto goBackToMainMenu = {
+			menuContext.currentMenu = mainMenu;
+			menuContext.selection = 0;
+		};
+		
+		goBackMenuItem.onActivate ~= goBackToMainMenu;
+		optionsMenu.onCancel ~= goBackToMainMenu;
+		
+		// Set menu
+		menuContext.currentMenu = optionsMenu;
 		menuContext.selection = 0;
 	}
 }

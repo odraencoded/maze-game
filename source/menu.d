@@ -263,3 +263,86 @@ class TextEntryMenuItem : MenuItem {
 		refreshText();
 	}
 }
+
+/++
+ + A menu item that cycles through multiple options.
+ +/
+class ChoiceMenuItem(T) : MenuItem {
+	Signal!(ChoiceMenuItem) onChoose;
+	
+	dstring prefix;
+	
+	struct Choice {
+		dstring text;
+		T value;
+	}
+	
+	Choice[] choices;
+	
+	/++
+	 + The index of the current selected choice.
+	 + Returns -1 if selection is invalid.
+	 +/
+	@property {
+		int selectedIndex() {
+			return _selectedIndex;
+		}
+		
+		void selectedIndex(int newIndex) {
+			_selectedIndex = newIndex;
+			refreshText();
+			onChoose(this);
+		}
+	}
+	
+	/++
+	 + Getter and setter for the selected value.
+	 + Sets selectedIndex to -1 if input is not amongst valid choices.
+	 +/
+	@property {
+		T selectedChoice(){
+			return choices[selectedIndex].value;
+		}
+	
+		void selectedChoice(T newChoice) {
+			import std.algorithm;
+			
+			selectedIndex = countUntil!"a.value == b"(choices, newChoice);
+		}
+	}
+	
+	this(Text text, dstring prefix) {
+		this.text = text;
+		this.prefix = prefix;
+		refreshText();
+		
+		onActivate ~= &cycleThroughChoices;
+	}
+	
+	void refreshText() {
+		// Refresh text graphic
+		if(selectedIndex >= 0) {
+			auto choiceText = choices[selectedIndex % $].text;
+			text.setString(this.prefix ~ choiceText);
+		} else {
+			text.setString(this.prefix ~ "?");
+		}
+	}
+	
+	/++
+	 + Switch to the next choice.
+	 +/
+	void cycleThroughChoices() {
+		if(choices.length > 0) {
+			_selectedIndex = (_selectedIndex + 1) % choices.length;
+		} else {
+			_selectedIndex = -1;
+		}
+		
+		onChoose(this);
+		refreshText();
+	}
+	
+private:
+	int _selectedIndex = -1;
+}

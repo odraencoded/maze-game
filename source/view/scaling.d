@@ -13,7 +13,18 @@ enum ERROR_BUFFER_CREATION_MESSAGE = "Couldn't create rendering buffer";
  */
 class VideoResizer : Drawable {
 	Game game;
-	ScalingMode scalingMode;
+	
+	/++
+	 + Scaling mode property.
+	 + Automatically resizes view when set.
+	 +/
+	@property {
+		ScalingMode scalingMode() const pure nothrow { return _scalingMode; }
+		void scalingMode(ScalingMode value) {
+			_scalingMode = value;
+			checkSize();
+		}
+	}
 	
 	this(Game game) {
 		this.game = game;
@@ -47,7 +58,7 @@ class VideoResizer : Drawable {
 			Vector2f scale;
 			Vector2u viewSize;
 			
-			final switch(scalingMode) {
+			final switch(_scalingMode) {
 			case ScalingMode.None:
 				viewSize = windowSize;
 				scale = Vector2f(1, 1);
@@ -100,6 +111,7 @@ class VideoResizer : Drawable {
 	
 	private {
 		Sprite _bufferSprite;
+		ScalingMode _scalingMode;
 	}
 }
 
