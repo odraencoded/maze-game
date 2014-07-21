@@ -28,13 +28,13 @@ enum NEW_STAGE_TITLE = "New Stage";
 enum FALLBACK_STAGE_TITLE = "Untitled";
 enum FALLBACK_STAGE_FILENAME = EDITOR_DIRECTORY ~ slash ~ "untitled.maze";
 
-class MazeEditorScreen : GameScreen {
+class EditorScreen : GameScreen {
 	EditingContext context;
 	
 	string stageFilename;
 	
-	Signal!(MazeEditorScreen) onQuit;
-	MazeEditorStageRenderer stageRenderer;
+	Signal!(EditorScreen) onQuit;
+	EditorStageRenderer stageRenderer;
 	
 	EditingToolSet toolset;
 	EditingToolSet.Anchor toolsetAnchor;
@@ -96,7 +96,7 @@ class MazeEditorScreen : GameScreen {
 		toolsetAnchor.side = Side.TopAndRight;
 		toolsetAnchor.margin = Point(8, 8);
 		
-		stageRenderer = new MazeEditorStageRenderer(gameAssets, this);
+		stageRenderer = new EditorStageRenderer(gameAssets, this);
 		
 		// Create cursor sprite
 		cursorSprite = new TileSprite();
@@ -235,14 +235,14 @@ class MazeEditorScreen : GameScreen {
 		// If no context is loaded in the editor, load the editor settings
 		// screen instead
 		if(context is null)
-			game.nextScreen = new MazeEditorSettingsScreen(game, this);
+			game.nextScreen = new EditorSettingsScreen(game, this);
 	}
 	
 	override void cycle(in InputState input, in float delta) {
 		bool openSettings = false;
 		openSettings |= input.wasKeyTurnedOn(SystemKey.Escape);
 		if(openSettings) {
-			game.nextScreen = new MazeEditorSettingsScreen(game, this);
+			game.nextScreen = new EditorSettingsScreen(game, this);
 			return;
 		}
 		
@@ -580,13 +580,13 @@ class MazeEditorScreen : GameScreen {
 	}
 }
 
-class MazeEditorStageRenderer : StageRenderer {
+class EditorStageRenderer : StageRenderer {
 	import mazescreen;
 	
-	MazeEditorScreen screen;
+	EditorScreen screen;
 	VertexCache[Wall] constructionCache;
 	
-	this(GameAssets assets, MazeEditorScreen screen) {
+	this(GameAssets assets, EditorScreen screen) {
 		super(assets);
 		this.screen = screen;
 	}
@@ -610,8 +610,8 @@ class MazeEditorStageRenderer : StageRenderer {
 class EditingContext {
 	Stage stage;
 	StageInfo stageMetadata;
-	MazeEditorScreen editorScreen;
-	MazeEditorStageRenderer stageRenderer;
+	EditorScreen editorScreen;
+	EditorStageRenderer stageRenderer;
 }
 
 /++
@@ -846,12 +846,12 @@ class EditingTool {
 	const(Tile)* icon;
 }
 
-class MazeEditorSettingsScreen : GameScreen {
+class EditorSettingsScreen : GameScreen {
 	MenuContext menuContext;
-	MazeEditorScreen editorScreen;
+	EditorScreen editorScreen;
 	Menu mainMenu;
 	
-	this(Game game, MazeEditorScreen screen) {
+	this(Game game, EditorScreen screen) {
 		super(game);
 		
 		// Create the menu

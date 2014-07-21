@@ -1,5 +1,6 @@
 module screens;
 
-public import mazescreen;
-public import menuscreen;
-public import gamescreen;
+public import gamescreen : GameScreen;
+public import menuscreen : MenuScreen;
+public import mazescreen : MazeScreen;
+public import editorscreen: EditorScreen;
